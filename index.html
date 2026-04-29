@@ -7,8 +7,8 @@ body{margin:0;font-family:Segoe UI;background:#eef2f7;}
 .container{padding:15px;}
 .top-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;position:relative;}
 input,select{padding:8px;border:1px solid #ccc;border-radius:5px;}
-button{padding:8px 12px;border:none;border-radius:5px;cursor:pointer;background:#2563eb;color:white;}
-.cards{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+button{padding:8px 12px;border:none;border-radius:5px;background:#2563eb;color:white;cursor:pointer;}
+.cards{display:flex;gap:10px;margin-bottom:10px;}
 .card{flex:1;background:white;padding:10px;border-radius:6px;text-align:center;border:1px solid #ddd;}
 .credito{color:#16a34a;}
 .debito{color:#dc2626;}
@@ -23,9 +23,6 @@ td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
 <button onclick="abrirListaFuncionarios()">Funcionários</button>
 <button onclick="carregar()">Carregar</button>
 <button onclick="salvar()">Salvar</button>
-<button onclick="exportarCSV()">Exportar</button>
-<button onclick="padrao()">Padrão</button>
-<button onclick="limpar()">Limpar</button>
 
 <div id="popupFuncionarios" style="
 display:none;
@@ -40,7 +37,8 @@ max-height:200px;
 overflow:auto;
 z-index:999;
 width:200px;
-"></div></div><div class="cards">
+"></div>
+</div><div class="cards">
 <div class="card">Trabalhado<br><b id="h">00:00</b></div>
 <div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
 <div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
@@ -61,8 +59,20 @@ const anoEl=document.getElementById("ano");
 const empresaEl=document.getElementById("empresa");
 const funcionarioEl=document.getElementById("funcionario");
 
-for(let m=1;m<=12;m++){mesEl.innerHTML+=<option value="${m}">${m}</option>;}
-for(let a=2024;a<=2030;a++){anoEl.innerHTML+=<option value="${a}">${a}</option>;}
+// 🔥 POPULAR MÊS
+for(let m=1;m<=12;m++){
+mesEl.innerHTML+=<option value="${m}">${String(m).padStart(2,'0')}</option>;
+}
+
+// 🔥 POPULAR ANO
+for(let a=2024;a<=2030;a++){
+anoEl.innerHTML+=<option value="${a}">${a}</option>;
+}
+
+// 🔥 MÊS ATUAL AUTOMÁTICO
+const hoje = new Date();
+mesEl.value = hoje.getMonth()+1;
+anoEl.value = hoje.getFullYear();
 
 function getKey(){
 return ${empresaEl.value}_${funcionarioEl.value}_${anoEl.value}_${mesEl.value};
@@ -70,7 +80,9 @@ return ${empresaEl.value}_${funcionarioEl.value}_${anoEl.value}_${mesEl.value};
 
 function gerar(){
 tb.innerHTML="";
-for(let i=1;i<=30;i++){
+const dias = new Date(anoEl.value, mesEl.value, 0).getDate();
+
+for(let i=1;i<=dias;i++){
 tb.innerHTML+=`
 <tr>
 <td>${i}</td>
@@ -79,6 +91,9 @@ tb.innerHTML+=`
 </tr>`;
 }
 }
+
+mesEl.onchange=gerar;
+anoEl.onchange=gerar;
 
 function calc(){
 let total=0;
@@ -117,7 +132,7 @@ const i=r.querySelectorAll("input");
 dados.push({entrada:i[0].value,saida:i[1].value});
 });
 
-// salva funcionário por empresa
+// salva funcionário
 await db.collection("empresas")
 .doc(emp)
 .collection("funcionarios")
@@ -149,7 +164,7 @@ inp[1].value=dados[i].saida;
 calc();
 }
 
-// 🔥 LISTA DE FUNCIONÁRIOS
+// 🔥 LISTA FUNCIONÁRIOS
 async function abrirListaFuncionarios(){
 const emp=empresaEl.value.trim().toLowerCase();
 
@@ -194,10 +209,6 @@ if(!popup.contains(e.target) && e.target.innerText !== "Funcionários"){
 popup.style.display="none";
 }
 });
-
-function exportarCSV(){alert("export depois");}
-function padrao(){gerar();}
-function limpar(){location.reload();}
 
 gerar();
 
