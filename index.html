@@ -1,31 +1,50 @@
 <!DOCTYPE html><html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Controle de Ponto</title><style>
+<title>Sistema de Controle de Ponto</title><style>
 body{margin:0;font-family:Segoe UI;background:#eef2f7;}
 .header{background:#1e293b;color:white;padding:15px;text-align:center;}
 .container{padding:15px;}
-.top-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.top-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;position:relative;}
 input,select{padding:8px;border:1px solid #ccc;border-radius:5px;}
-button{padding:8px 12px;border:none;border-radius:5px;background:#2563eb;color:white;cursor:pointer;}
-.cards{display:flex;gap:10px;margin-bottom:10px;}
+button{padding:8px 12px;border:none;border-radius:5px;cursor:pointer;background:#2563eb;color:white;}
+.cards{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
 .card{flex:1;background:white;padding:10px;border-radius:6px;text-align:center;border:1px solid #ddd;}
+.credito{color:#16a34a;}
+.debito{color:#dc2626;}
 table{width:100%;border-collapse:collapse;}
 th{background:#334155;color:white;padding:8px;}
 td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
 </style></head><body><div class="header">Sistema de Controle de Ponto</div><div class="container"><div class="top-controls">
-<input id="empresa" placeholder="Empresa"><input id="funcionario" placeholder="Funcionário" list="listaFuncionarios">
-<datalist id="listaFuncionarios"></datalist>
-<button onclick="adicionarFuncionario()">+ Funcionário</button><input id="buscaFuncionario" placeholder="Buscar funcionário..." oninput="filtrarFuncionarios()">
-<div id="listaBusca"></div><select id="mes"></select>
+<input id="empresa" placeholder="Empresa">
+<input id="funcionario" placeholder="Funcionário"><select id="mes"></select>
 <select id="ano"></select>
 
+<button onclick="abrirListaFuncionarios()">Funcionários</button>
 <button onclick="carregar()">Carregar</button>
 <button onclick="salvar()">Salvar</button>
+<button onclick="exportarCSV()">Exportar</button>
+<button onclick="padrao()">Padrão</button>
+<button onclick="limpar()">Limpar</button>
 
-</div><div class="cards">
-<div class="card">Trabalhado<br><b id="h">0</b></div>
-<div class="card">Saldo<br><b id="sm">0</b></div>
+<div id="popupFuncionarios" style="
+display:none;
+position:absolute;
+top:45px;
+left:0;
+background:white;
+border:1px solid #ccc;
+border-radius:6px;
+padding:10px;
+max-height:200px;
+overflow:auto;
+z-index:999;
+width:200px;
+"></div></div><div class="cards">
+<div class="card">Trabalhado<br><b id="h">00:00</b></div>
+<div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
+<div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
+<div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
 </div><table>
 <thead>
 <tr>
@@ -75,12 +94,22 @@ total+=(s-e)/3600000;
 });
 
 h.innerText=total.toFixed(2);
+c.innerText="0";
+d.innerText="0";
 sm.innerText=total.toFixed(2);
 }
 
 document.addEventListener("input",calc);
 
 async function salvar(){
+const emp=empresaEl.value.trim().toLowerCase();
+const func=funcionarioEl.value.trim();
+
+if(!emp || !func){
+alert("Preencha empresa e funcionário");
+return;
+}
+
 let dados=[];
 
 document.querySelectorAll("#tb tr").forEach(r=>{
@@ -88,12 +117,22 @@ const i=r.querySelectorAll("input");
 dados.push({entrada:i[0].value,saida:i[1].value});
 });
 
+// salva funcionário por empresa
+await db.collection("empresas")
+.doc(emp)
+.collection("funcionarios")
+.doc(func.toLowerCase())
+.set({nome:func});
+
+// salva ponto
 await db.collection("pontos").doc(getKey()).set({dados});
-alert("Salvo");
+
+alert("Salvo na nuvem 🚀");
 }
 
 async function carregar(){
 gerar();
+
 const doc=await db.collection("pontos").doc(getKey()).get();
 if(!doc.exists)return;
 
@@ -101,6 +140,7 @@ const dados=doc.data().dados;
 
 document.querySelectorAll("#tb tr").forEach((r,i)=>{
 if(!dados[i])return;
+
 const inp=r.querySelectorAll("input");
 inp[0].value=dados[i].entrada;
 inp[1].value=dados[i].saida;
@@ -109,57 +149,55 @@ inp[1].value=dados[i].saida;
 calc();
 }
 
-// 🔥 FUNCIONÁRIOS POR EMPRESA
-let funcionariosCache=[];
+// 🔥 LISTA DE FUNCIONÁRIOS
+async function abrirListaFuncionarios(){
+const emp=empresaEl.value.trim().toLowerCase();
 
-async function carregarFuncionarios(){
-const emp=empresaEl.value;
-if(!emp)return;
-
-funcionariosCache=[];
-
-const snap=await db.collection("empresas").doc(emp).collection("funcionarios").get();
-
-snap.forEach(d=>{
-funcionariosCache.push(d.data().nome);
-});
-
-renderLista(funcionariosCache);
+if(!emp){
+alert("Digite a empresa primeiro");
+return;
 }
 
-function renderLista(lista){
-const div=document.getElementById("listaBusca");
-div.innerHTML="";
+const popup=document.getElementById("popupFuncionarios");
+popup.style.display="block";
+popup.innerHTML="Carregando...";
 
-lista.forEach(nome=>{
+const snap=await db.collection("empresas")
+.doc(emp)
+.collection("funcionarios")
+.get();
+
+popup.innerHTML="";
+
+snap.forEach(doc=>{
+const nome=doc.data().nome;
+
 const item=document.createElement("div");
 item.innerText=nome;
+item.style.padding="8px";
+item.style.cursor="pointer";
+
 item.onclick=()=>{
 funcionarioEl.value=nome;
+popup.style.display="none";
 carregar();
-div.innerHTML="";
 };
-div.appendChild(item);
+
+popup.appendChild(item);
 });
 }
 
-function filtrarFuncionarios(){
-const busca=document.getElementById("buscaFuncionario").value.toLowerCase();
-renderLista(funcionariosCache.filter(f=>f.toLowerCase().includes(busca)));
+// fechar popup
+document.addEventListener("click",(e)=>{
+const popup=document.getElementById("popupFuncionarios");
+if(!popup.contains(e.target) && e.target.innerText !== "Funcionários"){
+popup.style.display="none";
 }
+});
 
-async function adicionarFuncionario(){
-await db.collection("empresas")
-.doc(empresaEl.value)
-.collection("funcionarios")
-.doc(funcionarioEl.value)
-.set({nome:funcionarioEl.value});
-
-alert("Funcionário adicionado");
-carregarFuncionarios();
-}
-
-empresaEl.addEventListener("change",carregarFuncionarios);
+function exportarCSV(){alert("export depois");}
+function padrao(){gerar();}
+function limpar(){location.reload();}
 
 gerar();
 
