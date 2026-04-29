@@ -1,48 +1,32 @@
 <!DOCTYPE html><html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Sistema de Controle de Ponto</title><style>
+<title>Controle de Ponto</title><style>
 body{margin:0;font-family:Segoe UI;background:#eef2f7;}
 .header{background:#1e293b;color:white;padding:15px;text-align:center;}
 .container{padding:15px;}
-.top-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;position:relative;}
+.top{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;position:relative;}
 input,select{padding:8px;border:1px solid #ccc;border-radius:5px;}
 button{padding:8px 12px;border:none;border-radius:5px;background:#2563eb;color:white;cursor:pointer;}
-.cards{display:flex;gap:10px;margin-bottom:10px;}
-.card{flex:1;background:white;padding:10px;border-radius:6px;text-align:center;border:1px solid #ddd;}
-.credito{color:#16a34a;}
-.debito{color:#dc2626;}
+.card{background:white;padding:10px;border-radius:6px;border:1px solid #ddd;margin-bottom:10px;}
 table{width:100%;border-collapse:collapse;}
 th{background:#334155;color:white;padding:8px;}
 td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
-</style></head><body><div class="header">Sistema de Controle de Ponto</div><div class="container"><div class="top-controls">
+.popup{position:absolute;top:45px;background:white;border:1px solid #ccc;border-radius:6px;max-height:200px;overflow:auto;display:none;width:200px;}
+.popup div{padding:8px;cursor:pointer;}
+.popup div:hover{background:#f1f5f9;}
+</style></head><body><div class="header">Sistema de Controle de Ponto</div><div class="container"><div class="top">
 <input id="empresa" placeholder="Empresa">
 <input id="funcionario" placeholder="Funcionário"><select id="mes"></select>
 <select id="ano"></select>
 
-<button onclick="abrirListaFuncionarios()">Funcionários</button>
+<button onclick="abrirFuncionarios()">Funcionários</button>
 <button onclick="carregar()">Carregar</button>
 <button onclick="salvar()">Salvar</button>
 
-<div id="popupFuncionarios" style="
-display:none;
-position:absolute;
-top:45px;
-left:0;
-background:white;
-border:1px solid #ccc;
-border-radius:6px;
-padding:10px;
-max-height:200px;
-overflow:auto;
-z-index:999;
-width:200px;
-"></div>
-</div><div class="cards">
-<div class="card">Trabalhado<br><b id="h">00:00</b></div>
-<div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
-<div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
-<div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
+<div id="popup" class="popup"></div>
+</div><div class="card">
+Total Trabalhado: <b id="total">0</b> horas
 </div><table>
 <thead>
 <tr>
@@ -52,50 +36,57 @@ width:200px;
 </tr>
 </thead>
 <tbody id="tb"></tbody>
-</table></div><script>
+</table></div><!-- 🔥 FIREBASE PRIMEIRO --><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script>
+const firebaseConfig = {
+apiKey: "AIzaSyAEq2fa6m9px15IGR6vUPUQ_UnFhkwlPc",
+authDomain: "controle-ponto-1fb12.firebaseapp.com",
+projectId: "controle-ponto-1fb12"
+};
 
-const mesEl=document.getElementById("mes");
-const anoEl=document.getElementById("ano");
-const empresaEl=document.getElementById("empresa");
-const funcionarioEl=document.getElementById("funcionario");
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-// 🔥 POPULAR MÊS
+// ELEMENTOS
+const empresa = document.getElementById("empresa");
+const funcionario = document.getElementById("funcionario");
+const mes = document.getElementById("mes");
+const ano = document.getElementById("ano");
+const tb = document.getElementById("tb");
+const totalEl = document.getElementById("total");
+
+// MÊS/ANO
 for(let m=1;m<=12;m++){
-mesEl.innerHTML+=<option value="${m}">${String(m).padStart(2,'0')}</option>;
+mes.innerHTML+=<option value="${m}">${String(m).padStart(2,'0')}</option>;
 }
-
-// 🔥 POPULAR ANO
 for(let a=2024;a<=2030;a++){
-anoEl.innerHTML+=<option value="${a}">${a}</option>;
+ano.innerHTML+=<option value="${a}">${a}</option>;
 }
 
-// 🔥 MÊS ATUAL AUTOMÁTICO
-const hoje = new Date();
-mesEl.value = hoje.getMonth()+1;
-anoEl.value = hoje.getFullYear();
+const hoje=new Date();
+mes.value=hoje.getMonth()+1;
+ano.value=hoje.getFullYear();
 
-function getKey(){
-return ${empresaEl.value}_${funcionarioEl.value}_${anoEl.value}_${mesEl.value};
-}
-
+// GERAR DIAS
 function gerar(){
 tb.innerHTML="";
-const dias = new Date(anoEl.value, mesEl.value, 0).getDate();
+const dias=new Date(ano.value,mes.value,0).getDate();
 
 for(let i=1;i<=dias;i++){
-tb.innerHTML+=`
-<tr>
+const tr=document.createElement("tr");
+tr.innerHTML=`
 <td>${i}</td>
 <td><input type="time"></td>
 <td><input type="time"></td>
-</tr>`;
+`;
+tb.appendChild(tr);
 }
 }
+mes.onchange=gerar;
+ano.onchange=gerar;
+gerar();
 
-mesEl.onchange=gerar;
-anoEl.onchange=gerar;
-
-function calc(){
+// CALCULAR
+function calcular(){
 let total=0;
 
 document.querySelectorAll("#tb tr").forEach(r=>{
@@ -108,19 +99,18 @@ total+=(s-e)/3600000;
 }
 });
 
-h.innerText=total.toFixed(2);
-c.innerText="0";
-d.innerText="0";
-sm.innerText=total.toFixed(2);
+totalEl.innerText=total.toFixed(2);
+}
+document.addEventListener("input",calcular);
+
+// CHAVE
+function chave(){
+return ${empresa.value}_${funcionario.value}_${ano.value}_${mes.value};
 }
 
-document.addEventListener("input",calc);
-
+// SALVAR
 async function salvar(){
-const emp=empresaEl.value.trim().toLowerCase();
-const func=funcionarioEl.value.trim();
-
-if(!emp || !func){
+if(!empresa.value || !funcionario.value){
 alert("Preencha empresa e funcionário");
 return;
 }
@@ -134,21 +124,22 @@ dados.push({entrada:i[0].value,saida:i[1].value});
 
 // salva funcionário
 await db.collection("empresas")
-.doc(emp)
+.doc(empresa.value)
 .collection("funcionarios")
-.doc(func.toLowerCase())
-.set({nome:func});
+.doc(funcionario.value)
+.set({nome:funcionario.value});
 
 // salva ponto
-await db.collection("pontos").doc(getKey()).set({dados});
+await db.collection("pontos").doc(chave()).set({dados});
 
-alert("Salvo na nuvem 🚀");
+alert("Salvo com sucesso 🚀");
 }
 
+// CARREGAR
 async function carregar(){
 gerar();
 
-const doc=await db.collection("pontos").doc(getKey()).get();
+const doc=await db.collection("pontos").doc(chave()).get();
 if(!doc.exists)return;
 
 const dados=doc.data().dados;
@@ -156,29 +147,27 @@ const dados=doc.data().dados;
 document.querySelectorAll("#tb tr").forEach((r,i)=>{
 if(!dados[i])return;
 
-const inp=r.querySelectorAll("input");
-inp[0].value=dados[i].entrada;
-inp[1].value=dados[i].saida;
+const inputs=r.querySelectorAll("input");
+inputs[0].value=dados[i].entrada;
+inputs[1].value=dados[i].saida;
 });
 
-calc();
+calcular();
 }
 
-// 🔥 LISTA FUNCIONÁRIOS
-async function abrirListaFuncionarios(){
-const emp=empresaEl.value.trim().toLowerCase();
-
-if(!emp){
-alert("Digite a empresa primeiro");
+// FUNCIONÁRIOS
+async function abrirFuncionarios(){
+if(!empresa.value){
+alert("Digite a empresa");
 return;
 }
 
-const popup=document.getElementById("popupFuncionarios");
+const popup=document.getElementById("popup");
 popup.style.display="block";
 popup.innerHTML="Carregando...";
 
 const snap=await db.collection("empresas")
-.doc(emp)
+.doc(empresa.value)
 .collection("funcionarios")
 .get();
 
@@ -187,42 +176,25 @@ popup.innerHTML="";
 snap.forEach(doc=>{
 const nome=doc.data().nome;
 
-const item=document.createElement("div");
-item.innerText=nome;
-item.style.padding="8px";
-item.style.cursor="pointer";
+const div=document.createElement("div");
+div.innerText=nome;
 
-item.onclick=()=>{
-funcionarioEl.value=nome;
+div.onclick=()=>{
+funcionario.value=nome;
 popup.style.display="none";
 carregar();
 };
 
-popup.appendChild(item);
+popup.appendChild(div);
 });
 }
 
 // fechar popup
 document.addEventListener("click",(e)=>{
-const popup=document.getElementById("popupFuncionarios");
-if(!popup.contains(e.target) && e.target.innerText !== "Funcionários"){
+const popup=document.getElementById("popup");
+if(!popup.contains(e.target) && e.target.innerText!=="Funcionários"){
 popup.style.display="none";
 }
 });
-
-gerar();
-
-</script><!-- Firebase --><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script>
-const firebaseConfig = {
-apiKey: "AIzaSyAEq2fa6m9px15IGR6vUPUQ_UnFhkwlPc",
-authDomain: "controle-ponto-1fb12.firebaseapp.com",
-projectId: "controle-ponto-1fb12",
-storageBucket: "controle-ponto-1fb12.firebasestorage.app",
-messagingSenderId: "405114720617",
-appId: "1:405114720617:web:a1dd178eb1592dcda4adf8"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
 </script></body>
 </html>
