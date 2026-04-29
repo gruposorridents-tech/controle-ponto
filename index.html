@@ -1,191 +1,314 @@
-// Importando o Firebase v10 Modular direto do CDN
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+<!DOCTYPE html>
 
-// SUAS CREDENCIAIS DO FIREBASE (Pegue no Console do Firebase)
-const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "SEU_APP_ID"
-};
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sistema de Controle de Ponto</title>
 
-// Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+<style>
+body{margin:0;font-family:Segoe UI;background:#eef2f7;}
+.header{background:#1e293b;color:white;padding:15px;text-align:center;}
+.container{padding:15px;}
+.top-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+input,select{padding:8px;border:1px solid #ccc;border-radius:5px;}
+button{padding:8px 12px;border:none;border-radius:5px;cursor:pointer;background:#2563eb;color:white;}
+.cards{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.card{flex:1;background:white;padding:10px;border-radius:6px;text-align:center;border:1px solid #ddd;}
+.credito{color:#16a34a;}
+.debito{color:#dc2626;}
+table{width:100%;border-collapse:collapse;}
+th{background:#334155;color:white;padding:8px;}
+td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
+.hoje{background:#e0f2fe !important;}
+.obs{width:150px;}
+</style>
 
-// Referências da Tela
-const selectEmpresa = document.getElementById('empresa');
-const selectMes = document.getElementById('mes');
-const inputAno = document.getElementById('ano');
-const inputFuncionario = document.getElementById('nome_funcionario');
-const datalistFuncionarios = document.getElementById('lista_funcionarios');
-const corpoTabela = document.getElementById('corpo_tabela');
-const btnCarregar = document.getElementById('btn_carregar');
-const btnSalvar = document.getElementById('btn_salvar');
+</head>
 
-// Função para formatar o nome em ID (ex: "Danilo Nascimento" -> "danilo_nascimento")
-const gerarId = (nome) => nome.trim().toLowerCase().replace(/\s+/g, '_');
+<body>
 
-// -----------------------------------------------------
-// FUNÇÃO 1: Buscar Lista de Funcionários da Empresa
-// -----------------------------------------------------
-async function carregarListaFuncionarios() {
-    const empresa = selectEmpresa.value;
-    const funcRef = collection(db, "empresas", empresa, "funcionarios");
-    
-    datalistFuncionarios.innerHTML = ''; // Limpa lista atual
-    
-    try {
-        const snapshot = await getDocs(funcRef);
-        snapshot.forEach(doc => {
-            const option = document.createElement('option');
-            option.value = doc.data().nome; // Mostra o nome real
-            datalistFuncionarios.appendChild(option);
-        });
-    } catch (e) {
-        console.error("Erro ao carregar funcionários:", e);
-    }
+<div class="header">Sistema de Controle de Ponto</div>
+
+<div class="container">
+
+<div class="top-controls">
+<input id="empresa" placeholder="Empresa">
+<input id="funcionario" placeholder="Funcionário">
+
+<select id="mes"></select> <select id="ano"></select>
+
+<input id="carga" placeholder="Horas/dia (ex: 9)" style="width:130px">
+
+<button onclick="carregar()">Carregar</button> <button onclick="salvar()">Salvar</button> <button onclick="exportarCSV()">Exportar</button> <button onclick="padrao()">Padrão</button> <button onclick="limpar()">Limpar</button>
+
+</div>
+
+<div class="cards">
+<div class="card">Trabalhado<br><b id="h">00:00</b></div>
+<div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
+<div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
+<div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
+<div class="card">Saldo Anterior<br><b id="sa">00:00</b></div>
+<div class="card">Saldo Acum.<br><b id="ac">00:00</b></div>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Dia</th>
+<th>Sem</th>
+<th>Tipo</th>
+<th>Entrada</th>
+<th>Saída Almoço</th>
+<th>Volta</th>
+<th>Saída</th>
+<th>Total</th>
+<th>Saldo</th>
+<th>Observação</th>
+</tr>
+</thead>
+<tbody id="tb"></tbody>
+</table>
+
+</div>
+
+<script>
+
+const diasSemana=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+const mesEl=document.getElementById("mes");
+const anoEl=document.getElementById("ano");
+const empresaEl=document.getElementById("empresa");
+const funcionarioEl=document.getElementById("funcionario");
+const cargaEl=document.getElementById("carga");
+
+for(let m=1;m<=12;m++){
+mesEl.innerHTML+=`<option value="${m}">${String(m).padStart(2,'0')}</option>`;
+}
+for(let a=2020;a<=2030;a++){
+anoEl.innerHTML+=`<option value="${a}">${a}</option>`;
 }
 
-// Quando mudar a empresa, recarrega a lista de funcionários
-selectEmpresa.addEventListener('change', carregarListaFuncionarios);
-// Carrega na primeira vez que a tela abre
-carregarListaFuncionarios();
+function getKey(mesVal,anoVal){
+const emp=empresaEl.value.trim().toLowerCase();
+const func=funcionarioEl.value.trim().toLowerCase();
 
-
-// -----------------------------------------------------
-// FUNÇÃO 2: Lógica de Cálculo de Horas (O Motor)
-// -----------------------------------------------------
-function tempoParaMinutos(horaString) {
-    if (!horaString) return 0;
-    const [h, m] = horaString.split(':').map(Number);
-    return (h * 60) + m;
+if(!emp || !func){
+return `ponto_padrao_${anoVal}_${mesVal}`;
 }
 
-function minutosParaTempo(minutos) {
-    if (minutos <= 0) return "00:00";
-    const h = Math.floor(minutos / 60);
-    const m = minutos % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+return `ponto_${emp}_${func}_${anoVal}_${mesVal}`;
 }
 
-function calcularHoraLinha(event) {
-    // Pega a linha da tabela onde a digitação ocorreu
-    const tr = event.target.closest('tr');
-    
-    const e1 = tr.querySelector('.e1').value;
-    const s1 = tr.querySelector('.s1').value;
-    const e2 = tr.querySelector('.e2').value;
-    const s2 = tr.querySelector('.s2').value;
+function gerar(){
+const mes=+mesEl.value;
+const ano=+anoEl.value;
 
-    let totalMinutos = 0;
+tb.innerHTML="";
+const dias=new Date(ano,mes,0).getDate();
 
-    // Cálculo do Primeiro Turno
-    if (e1 && s1) totalMinutos += (tempoParaMinutos(s1) - tempoParaMinutos(e1));
-    // Cálculo do Segundo Turno
-    if (e2 && s2) totalMinutos += (tempoParaMinutos(s2) - tempoParaMinutos(e2));
+for(let i=1;i<=dias;i++){
+const d=new Date(ano,mes-1,i);
+const tr=document.createElement("tr");
 
-    // Preenche o total daquele dia
-    tr.querySelector('.total-horas').innerText = minutosParaTempo(totalMinutos);
+if(new Date().toDateString()==d.toDateString()){
+tr.classList.add("hoje");
 }
 
-// -----------------------------------------------------
-// FUNÇÃO 3: Gerar Tabela do Mês e Ler do Firebase
-// -----------------------------------------------------
-btnCarregar.addEventListener('click', async () => {
-    const nomeFunc = inputFuncionario.value;
-    if (!nomeFunc) return alert("Digite ou selecione um funcionário!");
+tr.innerHTML=`
+<td>${i}/${mes}</td>
+<td>${diasSemana[d.getDay()]}</td>
+<td>
+<select>
+<option>Normal</option>
+<option>Folga/FDS</option>
+<option>Feriado</option>
+<option>Atestado</option>
+<option>Falta</option>
+</select>
+</td>
+<td><input type="time"></td>
+<td><input type="time"></td>
+<td><input type="time"></td>
+<td><input type="time"></td>
+<td class="t">00:00</td>
+<td class="s">00:00</td>
+<td><input class="obs" type="text" placeholder="Obs..."></td>
+`;
+tb.appendChild(tr);
+}
+}
 
-    const funcId = gerarId(nomeFunc);
-    const empresa = selectEmpresa.value;
-    const ano = inputAno.value;
-    const mes = selectMes.value;
+mesEl.onchange=gerar;
+anoEl.onchange=gerar;
+gerar();
 
-    // 3.1: Criar Funcionário caso não exista (Conforme seu fluxograma)
-    const docFuncRef = doc(db, "empresas", empresa, "funcionarios", funcId);
-    await setDoc(docFuncRef, { nome: nomeFunc }, { merge: true });
+function salvar(){
+const key=getKey(mesEl.value,anoEl.value);
 
-    // 3.2: Limpar a tabela e descobrir quantos dias tem o mês
-    corpoTabela.innerHTML = '';
-    const diasNoMes = new Date(ano, parseInt(mes), 0).getDate();
+let dados=[];
 
-    // 3.3: Buscar dados já salvos (Histórico do Firebase)
-    const chavePonto = `${empresa}_${funcId}_${ano}_${mes}`;
-    const docPontoRef = doc(db, "pontos", chavePonto);
-    const docSnap = await getDoc(docPontoRef);
-    const dadosSalvos = docSnap.exists() ? docSnap.data().dias : {};
+document.querySelectorAll("#tb tr").forEach(r=>{
+const inputs=r.querySelectorAll("input");
 
-    // 3.4: Montar Tabela na Tela
-    for (let i = 1; i <= diasNoMes; i++) {
-        const diaDado = dadosSalvos[i] || { e1: '', s1: '', e2: '', s2: '', total: '00:00' };
-        
-        const tr = document.createElement('tr');
-        tr.dataset.dia = i; // Guarda o dia na linha para facilitar o salvamento
-        tr.innerHTML = `
-            <td>${i}</td>
-            <td><input type="time" class="e1" value="${diaDado.e1}"></td>
-            <td><input type="time" class="s1" value="${diaDado.s1}"></td>
-            <td><input type="time" class="e2" value="${diaDado.e2}"></td>
-            <td><input type="time" class="s2" value="${diaDado.s2}"></td>
-            <td class="total-horas">${diaDado.total}</td>
-        `;
-
-        // Adiciona evento para recalcular automaticamente ao alterar qualquer input
-        const inputs = tr.querySelectorAll('input');
-        inputs.forEach(input => input.addEventListener('change', calcularHoraLinha));
-
-        corpoTabela.appendChild(tr);
-    }
-
-    // Mostra o botão de salvar
-    btnSalvar.style.display = 'block';
+dados.push({
+tipo:r.querySelector("select").value,
+entrada:inputs[0].value,
+saidaAlmoco:inputs[1].value,
+volta:inputs[2].value,
+saida:inputs[3].value,
+obs:inputs[4].value
+});
 });
 
-// -----------------------------------------------------
-// FUNÇÃO 4: Salvar Tudo no Firebase
-// -----------------------------------------------------
-btnSalvar.addEventListener('click', async () => {
-    const nomeFunc = inputFuncionario.value;
-    const funcId = gerarId(nomeFunc);
-    const empresa = selectEmpresa.value;
-    const ano = inputAno.value;
-    const mes = selectMes.value;
-    
-    // Objeto que vai guardar o ponto de todos os dias
-    const dadosDias = {};
+localStorage.setItem(key,JSON.stringify(dados));
+alert("Salvo com sucesso!");
+}
 
-    // Lê todas as linhas da tabela da tela
-    const linhas = corpoTabela.querySelectorAll('tr');
-    linhas.forEach(tr => {
-        const dia = tr.dataset.dia;
-        dadosDias[dia] = {
-            e1: tr.querySelector('.e1').value,
-            s1: tr.querySelector('.s1').value,
-            e2: tr.querySelector('.e2').value,
-            s2: tr.querySelector('.s2').value,
-            total: tr.querySelector('.total-horas').innerText
-        };
-    });
+function carregar(){
+gerar();
 
-    // Constrói a chave composta
-    const chavePonto = `${empresa}_${funcId}_${ano}_${mes}`;
-    const docPontoRef = doc(db, "pontos", chavePonto);
+const key=getKey(mesEl.value,anoEl.value);
+const dados=JSON.parse(localStorage.getItem(key));
+if(!dados)return;
 
-    try {
-        // Envia para a nuvem
-        await setDoc(docPontoRef, {
-            empresa,
-            funcionario: funcId,
-            ano,
-            mes,
-            dias: dadosDias
-        });
-        alert("Ponto salvo com sucesso na nuvem!");
-    } catch (e) {
-        console.error("Erro ao salvar:", e);
-        alert("Erro ao salvar o ponto.");
-    }
+document.querySelectorAll("#tb tr").forEach((r,i)=>{
+if(!dados[i])return;
+
+const inputs=r.querySelectorAll("input");
+
+r.querySelector("select").value=dados[i].tipo;
+inputs[0].value=dados[i].entrada;
+inputs[1].value=dados[i].saidaAlmoco;
+inputs[2].value=dados[i].volta;
+inputs[3].value=dados[i].saida;
+inputs[4].value=dados[i].obs || "";
 });
+
+calc();
+}
+
+function getMesAnterior(mes,ano){
+if(mes==1)return {mes:12,ano:ano-1};
+return {mes:mes-1,ano};
+}
+
+function getSaldoAnterior(){
+const anterior=getMesAnterior(+mesEl.value,+anoEl.value);
+const key=getKey(anterior.mes,anterior.ano);
+
+const dados=JSON.parse(localStorage.getItem(key));
+if(!dados)return 0;
+
+let saldo=0;
+const carga=parseFloat(cargaEl.value||8);
+
+dados.forEach(d=>{
+let horas=0;
+
+if(d.entrada && d.saida){
+let e=new Date(`1970-01-01T${d.entrada}`);
+let s=new Date(`1970-01-01T${d.saida}`);
+horas=(s-e)/3600000;
+}
+
+if(d.tipo==="Falta") saldo-=carga;
+else if(d.tipo==="Normal") saldo+=(horas-carga);
+});
+
+return saldo;
+}
+
+function calc(){
+let total=0,cred=0,deb=0;
+const carga=parseFloat(cargaEl.value||8);
+
+document.querySelectorAll("#tb tr").forEach(r=>{
+const i=r.querySelectorAll("input");
+const tipo=r.querySelector("select").value;
+
+let horas=0,saldo=0;
+
+if(i[0].value && i[1].value && i[2].value && i[3].value){
+
+let entrada = new Date(`1970-01-01T${i[0].value}`);
+let saidaAlmoco = new Date(`1970-01-01T${i[1].value}`);
+let volta = new Date(`1970-01-01T${i[2].value}`);
+let saida = new Date(`1970-01-01T${i[3].value}`);
+
+let manha = (saidaAlmoco - entrada);
+let tarde = (saida - volta);
+
+horas = (manha + tarde) / 3600000;
+}
+
+if(tipo==="Atestado"||tipo==="Folga/FDS"||tipo==="Feriado"){
+saldo=0;
+}
+else if(tipo==="Falta"){
+saldo=-carga;
+}
+else{
+saldo=horas-carga;
+}
+
+total+=horas;
+
+if(saldo>0)cred+=saldo;
+if(saldo<0)deb+=Math.abs(saldo);
+
+r.querySelector(".t").innerText=horas.toFixed(2);
+r.querySelector(".s").innerText=saldo.toFixed(2);
+});
+
+h.innerText=total.toFixed(2);
+c.innerText=cred.toFixed(2);
+d.innerText=deb.toFixed(2);
+
+let saldoMes=cred-deb;
+sm.innerText=saldoMes.toFixed(2);
+
+let saldoAnterior=getSaldoAnterior();
+sa.innerText=saldoAnterior.toFixed(2);
+
+ac.innerText=(saldoAnterior+saldoMes).toFixed(2);
+}
+
+document.addEventListener("input",calc);
+
+function exportarCSV(){
+let csv="Dia,Tipo,Entrada,Saida,Obs\n";
+
+document.querySelectorAll("#tb tr").forEach((r,i)=>{
+const tipo=r.querySelector("select").value;
+const inputs=r.querySelectorAll("input");
+
+csv+=`${i+1},${tipo},${inputs[0].value},${inputs[3].value},${inputs[4].value}\n`;
+});
+
+const blob=new Blob([csv]);
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="ponto.csv";
+a.click();
+}
+
+function padrao(){
+document.querySelectorAll("#tb tr").forEach(r=>{
+const i=r.querySelectorAll("input");
+i[0].value="08:00";
+i[1].value="12:00";
+i[2].value="13:00";
+i[3].value="18:00";
+});
+calc();
+}
+
+function limpar(){
+location.reload();
+}
+
+</script>
+
+</body>
+</html>
