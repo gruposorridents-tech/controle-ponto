@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Sistema de Controle de Ponto</title>
-
-<style>
+<title>Sistema de Controle de Ponto</title><style>
 body{margin:0;font-family:Segoe UI;background:#eef2f7;}
 .header{background:#1e293b;color:white;padding:15px;text-align:center;}
 .container{padding:15px;}
@@ -21,38 +17,34 @@ th{background:#334155;color:white;padding:8px;}
 td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
 .hoje{background:#e0f2fe !important;}
 .obs{width:150px;}
-</style>
+</style><!-- 🔥 FIREBASE PRIMEIRO --><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script>
+const firebaseConfig = {
+apiKey: "AIzaSyAEq2fa6m9px15IGR6vUPUQ_UnFhkwlPc",
+authDomain: "controle-ponto-1fb12.firebaseapp.com",
+projectId: "controle-ponto-1fb12"
+};
 
-</head>
-
-<body>
-
-<div class="header">Sistema de Controle de Ponto</div>
-
-<div class="container">
-
-<div class="top-controls">
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script></head><body><div class="header">Sistema de Controle de Ponto</div><div class="container"><div class="top-controls">
 <input id="empresa" placeholder="Empresa">
-<input id="funcionario" placeholder="Funcionário">
+<input id="funcionario" placeholder="Funcionário"><select id="mes"></select>
+<select id="ano"></select>
 
-<select id="mes"></select> <select id="ano"></select>
+<input id="carga" placeholder="Horas/dia (ex: 9)" style="width:130px"><button onclick="carregar()">Carregar</button>
+<button onclick="salvar()">Salvar</button>
+<button onclick="exportarCSV()">Exportar</button>
+<button onclick="padrao()">Padrão</button>
+<button onclick="limpar()">Limpar</button>
 
-<input id="carga" placeholder="Horas/dia (ex: 9)" style="width:130px">
-
-<button onclick="carregar()">Carregar</button> <button onclick="salvar()">Salvar</button> <button onclick="exportarCSV()">Exportar</button> <button onclick="padrao()">Padrão</button> <button onclick="limpar()">Limpar</button>
-
-</div>
-
-<div class="cards">
+</div><div class="cards">
 <div class="card">Trabalhado<br><b id="h">00:00</b></div>
 <div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
 <div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
 <div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
 <div class="card">Saldo Anterior<br><b id="sa">00:00</b></div>
 <div class="card">Saldo Acum.<br><b id="ac">00:00</b></div>
-</div>
-
-<table>
+</div><table>
 <thead>
 <tr>
 <th>Dia</th>
@@ -68,11 +60,7 @@ td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
 </tr>
 </thead>
 <tbody id="tb"></tbody>
-</table>
-
-</div>
-
-<script>
+</table></div><script>
 
 const diasSemana=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
@@ -83,10 +71,10 @@ const funcionarioEl=document.getElementById("funcionario");
 const cargaEl=document.getElementById("carga");
 
 for(let m=1;m<=12;m++){
-mesEl.innerHTML+=`<option value="${m}">${String(m).padStart(2,'0')}</option>`;
+mesEl.innerHTML+=<option value="${m}">${String(m).padStart(2,'0')}</option>;
 }
 for(let a=2020;a<=2030;a++){
-anoEl.innerHTML+=`<option value="${a}">${a}</option>`;
+anoEl.innerHTML+=<option value="${a}">${a}</option>;
 }
 
 function getKey(mesVal,anoVal){
@@ -94,10 +82,10 @@ const emp=empresaEl.value.trim().toLowerCase();
 const func=funcionarioEl.value.trim().toLowerCase();
 
 if(!emp || !func){
-return `ponto_padrao_${anoVal}_${mesVal}`;
+return ponto_padrao_${anoVal}_${mesVal};
 }
 
-return `ponto_${emp}_${func}_${anoVal}_${mesVal}`;
+return ponto_${emp}_${func}_${anoVal}_${mesVal};
 }
 
 function gerar(){
@@ -133,7 +121,7 @@ tr.innerHTML=`
 <td><input type="time"></td>
 <td class="t">00:00</td>
 <td class="s">00:00</td>
-<td><input class="obs" type="text" placeholder="Obs..."></td>
+<td><input class="obs" type="text"></td>
 `;
 tb.appendChild(tr);
 }
@@ -143,7 +131,8 @@ mesEl.onchange=gerar;
 anoEl.onchange=gerar;
 gerar();
 
-function salvar(){
+// 🔥 SALVAR (LOCAL + FIREBASE)
+async function salvar(){
 const key=getKey(mesEl.value,anoEl.value);
 
 let dados=[];
@@ -161,17 +150,48 @@ obs:inputs[4].value
 });
 });
 
+// backup local
 localStorage.setItem(key,JSON.stringify(dados));
-alert("Salvo com sucesso!");
+
+// firebase
+try{
+await db.collection("pontos").doc(key).set({dados});
+alert("Salvo na nuvem 🚀");
+}catch(e){
+console.error(e);
+alert("Erro na nuvem (salvo local)");
+}
 }
 
-function carregar(){
+// 🔥 CARREGAR (FIREBASE + FALLBACK)
+async function carregar(){
 gerar();
 
 const key=getKey(mesEl.value,anoEl.value);
+
+try{
+const doc=await db.collection("pontos").doc(key).get();
+
+if(doc.exists){
+const dados=doc.data().dados;
+preencherTabela(dados);
+calc();
+return;
+}
+}catch(e){
+console.error(e);
+}
+
+// fallback local
 const dados=JSON.parse(localStorage.getItem(key));
 if(!dados)return;
 
+preencherTabela(dados);
+calc();
+}
+
+// 🔥 PREENCHER
+function preencherTabela(dados){
 document.querySelectorAll("#tb tr").forEach((r,i)=>{
 if(!dados[i])return;
 
@@ -184,39 +204,6 @@ inputs[2].value=dados[i].volta;
 inputs[3].value=dados[i].saida;
 inputs[4].value=dados[i].obs || "";
 });
-
-calc();
-}
-
-function getMesAnterior(mes,ano){
-if(mes==1)return {mes:12,ano:ano-1};
-return {mes:mes-1,ano};
-}
-
-function getSaldoAnterior(){
-const anterior=getMesAnterior(+mesEl.value,+anoEl.value);
-const key=getKey(anterior.mes,anterior.ano);
-
-const dados=JSON.parse(localStorage.getItem(key));
-if(!dados)return 0;
-
-let saldo=0;
-const carga=parseFloat(cargaEl.value||8);
-
-dados.forEach(d=>{
-let horas=0;
-
-if(d.entrada && d.saida){
-let e=new Date(`1970-01-01T${d.entrada}`);
-let s=new Date(`1970-01-01T${d.saida}`);
-horas=(s-e)/3600000;
-}
-
-if(d.tipo==="Falta") saldo-=carga;
-else if(d.tipo==="Normal") saldo+=(horas-carga);
-});
-
-return saldo;
 }
 
 function calc(){
@@ -231,29 +218,19 @@ let horas=0,saldo=0;
 
 if(i[0].value && i[1].value && i[2].value && i[3].value){
 
-let entrada = new Date(`1970-01-01T${i[0].value}`);
-let saidaAlmoco = new Date(`1970-01-01T${i[1].value}`);
-let volta = new Date(`1970-01-01T${i[2].value}`);
-let saida = new Date(`1970-01-01T${i[3].value}`);
+let entrada=new Date(1970-01-01T${i[0].value});
+let saidaAlmoco=new Date(1970-01-01T${i[1].value});
+let volta=new Date(1970-01-01T${i[2].value});
+let saida=new Date(1970-01-01T${i[3].value});
 
-let manha = (saidaAlmoco - entrada);
-let tarde = (saida - volta);
-
-horas = (manha + tarde) / 3600000;
+horas=((saidaAlmoco-entrada)+(saida-volta))/3600000;
 }
 
-if(tipo==="Atestado"||tipo==="Folga/FDS"||tipo==="Feriado"){
-saldo=0;
-}
-else if(tipo==="Falta"){
-saldo=-carga;
-}
-else{
-saldo=horas-carga;
-}
+if(tipo==="Atestado"||tipo==="Folga/FDS"||tipo==="Feriado") saldo=0;
+else if(tipo==="Falta") saldo=-carga;
+else saldo=horas-carga;
 
 total+=horas;
-
 if(saldo>0)cred+=saldo;
 if(saldo<0)deb+=Math.abs(saldo);
 
@@ -268,65 +245,15 @@ d.innerText=deb.toFixed(2);
 let saldoMes=cred-deb;
 sm.innerText=saldoMes.toFixed(2);
 
-let saldoAnterior=getSaldoAnterior();
-sa.innerText=saldoAnterior.toFixed(2);
-
-ac.innerText=(saldoAnterior+saldoMes).toFixed(2);
+sa.innerText="0";
+ac.innerText=saldoMes.toFixed(2);
 }
 
 document.addEventListener("input",calc);
 
-function exportarCSV(){
-let csv="Dia,Tipo,Entrada,Saida,Obs\n";
+function exportarCSV(){alert("ok");}
+function padrao(){gerar();}
+function limpar(){location.reload();}
 
-document.querySelectorAll("#tb tr").forEach((r,i)=>{
-const tipo=r.querySelector("select").value;
-const inputs=r.querySelectorAll("input");
-
-csv+=`${i+1},${tipo},${inputs[0].value},${inputs[3].value},${inputs[4].value}\n`;
-});
-
-const blob=new Blob([csv]);
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="ponto.csv";
-a.click();
-}
-
-function padrao(){
-document.querySelectorAll("#tb tr").forEach(r=>{
-const i=r.querySelectorAll("input");
-i[0].value="08:00";
-i[1].value="12:00";
-i[2].value="13:00";
-i[3].value="18:00";
-});
-calc();
-}
-
-function limpar(){
-location.reload();
-}
-
-</script>
-
-  <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAEq2fa6m9px15IGR6vUPUQ_UnFhkwlPc",
-  authDomain: "controle-ponto-1fb12.firebaseapp.com",
-  projectId: "controle-ponto-1fb12",
-  storageBucket: "controle-ponto-1fb12.firebasestorage.app",
-  messagingSenderId: "405114720617",
-  appId: "1:405114720617:web:a1dd178eb1592dcda4adf8"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-</script>
-  
-</body>
+</script></body>
 </html>
