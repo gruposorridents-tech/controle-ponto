@@ -310,5 +310,23 @@ location.reload();
 
 </script>
 
+  <!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAEq2fa6m9px15IGR6vUPUQ_UnFhkwlPc",
+  authDomain: "controle-ponto-1fb12.firebaseapp.com",
+  projectId: "controle-ponto-1fb12",
+  storageBucket: "controle-ponto-1fb12.firebasestorage.app",
+  messagingSenderId: "405114720617",
+  appId: "1:405114720617:web:a1dd178eb1592dcda4adf8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+  
 </body>
 </html>
