@@ -241,3 +241,106 @@
             inputs[1].value = dados[i].saidaAlmoco;
             inputs[2].value = dados[i].volta;
             inputs[3].value = dados[i].saida;
+            inputs[4].value = dados[i].obs || "";
+        });
+    }
+
+    // Função auxiliar para converter "HH:MM" em minutos
+    function timeToMinutes(timeStr) {
+        if (!timeStr) return 0;
+        const partes = timeStr.split(':');
+        return parseInt(partes[0]) * 60 + parseInt(partes[1]);
+    }
+
+    // Função auxiliar para formatar horas decimais em "HH:MM"
+    function formatTime(decimalHours) {
+        const isNegative = decimalHours < 0;
+        const absoluteHours = Math.abs(decimalHours);
+        const hours = Math.floor(absoluteHours);
+        const minutes = Math.round((absoluteHours - hours) * 60);
+        const sinal = isNegative ? "-" : "";
+        return `${sinal}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    // 🔥 CALCULAR HORAS
+    function calc() {
+        let total = 0, cred = 0, deb = 0;
+        const cargaDiaria = parseFloat(cargaEl.value || 8);
+
+        document.querySelectorAll("#tb tr").forEach(r => {
+            const inputs = r.querySelectorAll("input");
+            const tipo = r.querySelector("select").value;
+
+            let horasTrabalhadas = 0;
+            let saldoDoDia = 0;
+
+            const entrada = inputs[0].value;
+            const saidaAlmoco = inputs[1].value;
+            const volta = inputs[2].value;
+            const saida = inputs[3].value;
+
+            // Se tem pelo menos entrada e saída, já calcula.
+            if(entrada) {
+                let minManha = 0;
+                let minTarde = 0;
+
+                if (entrada && saidaAlmoco) {
+                    minManha = timeToMinutes(saidaAlmoco) - timeToMinutes(entrada);
+                }
+                if (volta && saida) {
+                    minTarde = timeToMinutes(saida) - timeToMinutes(volta);
+                } else if (entrada && saida && !saidaAlmoco && !volta) {
+                    // Direto sem almoço
+                    minManha = timeToMinutes(saida) - timeToMinutes(entrada);
+                }
+
+                horasTrabalhadas = (minManha + minTarde) / 60;
+            }
+
+            // Regras de negócio
+            if(tipo === "Atestado" || tipo === "Folga/FDS" || tipo === "Feriado") {
+                saldoDoDia = horasTrabalhadas; // O que fizer é hora extra
+            } else if(tipo === "Falta") {
+                saldoDoDia = -cargaDiaria;
+            } else {
+                // Normal
+                if(horasTrabalhadas > 0) {
+                    saldoDoDia = horasTrabalhadas - cargaDiaria;
+                } else {
+                    saldoDoDia = 0; // Se não preencheu, ignora (ou mude para -cargaDiaria se preferir descontar dias não preenchidos)
+                }
+            }
+
+            total += horasTrabalhadas;
+            if(saldoDoDia > 0) cred += saldoDoDia;
+            if(saldoDoDia < 0) deb += Math.abs(saldoDoDia);
+
+            r.querySelector(".t").innerText = formatTime(horasTrabalhadas);
+            r.querySelector(".s").innerText = formatTime(saldoDoDia);
+            
+            // Cor do saldo na linha
+            r.querySelector(".s").style.color = saldoDoDia > 0 ? "green" : (saldoDoDia < 0 ? "red" : "black");
+        });
+
+        // Atualizar Cards
+        elH.innerText = formatTime(total);
+        elC.innerText = formatTime(cred);
+        elD.innerText = formatTime(deb);
+
+        let saldoMes = cred - deb;
+        elSM.innerText = formatTime(saldoMes);
+        elSM.style.color = saldoMes > 0 ? "green" : (saldoMes < 0 ? "red" : "black");
+
+        elSA.innerText = "00:00"; // Aqui você pode implementar a busca do mês passado depois
+        elAC.innerText = formatTime(saldoMes);
+    }
+
+    // Ouve qualquer alteração nos inputs e recalcula
+    document.addEventListener("input", calc);
+
+    function padrao() { gerar(); }
+    function limpar() { if(confirm("Deseja apagar os dados da tela?")) location.reload(); }
+
+</script>
+</body>
+</html>
