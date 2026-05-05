@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Ponto CLT - Saldo Acumulado</title>
+<title>Controle de Ponto CLT - Automação e Importação</title>
 <style>
     body{margin:0;font-family:'Segoe UI',sans-serif;background:#f1f5f9;color:#334155;}
     .header{background:#0f172a;color:white;padding:15px;text-align:center;font-weight:bold;}
@@ -11,10 +11,11 @@
     .top-controls{display:flex;gap:10px;flex-wrap:wrap;background:white;padding:20px;border-radius:10px;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);margin-bottom:20px;}
     .base-schedule{display:flex; gap:5px; align-items:center; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-top:10px; width:100%;}
     input,select{padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px; min-width: 150px;}
-    button{padding:10px 15px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:0.2s;}
+    button{padding:10px 15px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:0.2s; display:inline-flex; align-items:center; gap:5px;}
     .btn-primary{background:#2563eb;color:white;}
     .btn-success{background:#16a34a;color:white;}
     .btn-dark{background:#334155;color:white;}
+    .btn-import{background:#8b5cf6;color:white;}
     
     .cards{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;}
     .card{flex:1;background:white;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.05);min-width:120px;}
@@ -30,7 +31,6 @@
     .modal-content{background:white;padding:25px;border-radius:12px;width:90%;max-width:500px;}
     .grid-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     .full-w{grid-column: span 2;}
-    label{font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -64,12 +64,16 @@
         </div>
 
         <div class="base-schedule">
-            <span style="font-size:12px; font-weight:bold; color:#64748b">HORÁRIO BASE:</span>
+            <span style="font-size:11px; font-weight:bold; color:#64748b">HORÁRIO BASE:</span>
             <input type="time" id="bE1" value="08:00">
             <input type="time" id="bS1" value="12:00">
             <input type="time" id="bE2" value="13:00">
             <input type="time" id="bS2" value="17:00">
-            <input id="carga" type="number" value="8" style="width:50px" oninput="calc()"> <small>hrs/dia</small>
+            <input id="carga" type="number" value="8" style="width:50px" oninput="calc()">
+            <div style="margin-left: auto;">
+                <input type="file" id="fileInput" style="display:none" accept=".csv, .txt" onchange="importarArquivo(event)">
+                <button class="btn-import" onclick="document.getElementById('fileInput').click()">📁 Importar CSV</button>
+            </div>
         </div>
 
         <hr style="width:100%;border:0;border-top:1px solid #e2e8f0">
@@ -96,54 +100,46 @@
     <table>
         <thead>
             <tr>
-                <th>Dia</th>
-                <th>Sem</th>
-                <th>Tipo de Jornada</th>
-                <th>Entrada</th>
-                <th>Almoço</th>
-                <th>Retorno</th>
-                <th>Saída</th>
-                <th>Total</th>
-                <th>Saldo</th>
-                <th>Obs/H. Abonadas</th>
+                <th>Dia</th><th>Sem</th><th>Tipo de Jornada</th><th>Entrada</th><th>Almoço</th><th>Retorno</th><th>Saída</th><th>Total</th><th>Saldo</th><th>Obs/H. Abonadas</th>
             </tr>
         </thead>
         <tbody id="tb"></tbody>
     </table>
 </div>
 
-<!-- MODAIS (EMPRESA E FUNCIONARIO) MANTIDOS -->
+<!-- MODAL EMPRESA -->
 <div id="mEmpresa" class="modal"><div class="modal-content">
     <h3>🏢 Cadastrar Empresa</h3>
-    <div class="grid-form">
+    <div class="grid-form" id="formEmpresa">
         <input id="eCNPJ" class="full-w" style="border: 2px solid #2563eb" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
         <input id="eNome" class="full-w" placeholder="Razão Social">
         <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
         <input id="eEstado" placeholder="UF"><input id="eEnd" class="full-w" placeholder="Logradouro">
         <input id="eNum" placeholder="Número"><input id="eTel" placeholder="Telefone">
     </div><br>
-    <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">Salvar</button>
+    <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">Salvar e Limpar</button>
     <button onclick="fecharModal('mEmpresa')">Cancelar</button>
 </div></div>
 
+<!-- MODAL COLABORADOR -->
 <div id="mFunc" class="modal"><div class="modal-content">
     <h3>👤 Cadastrar Colaborador</h3>
-    <div class="grid-form">
-        <div class="full-w"><label>Vincular à Empresa:</label><br><select id="fEmpresaVinculo" style="width:100%"></select></div>
+    <div class="grid-form" id="formFunc">
+        <div class="full-w"><select id="fEmpresaVinculo" style="width:100%"></select></div>
         <input id="fNome" class="full-w" placeholder="Nome Completo"><input id="fCPF" placeholder="CPF">
         <input id="fCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'f')">
         <input id="fEstado" placeholder="UF"><input id="fEnd" class="full-w" placeholder="Endereço">
         <input id="fNum" placeholder="Número"><input id="fTel" placeholder="Telefone">
     </div><br>
-    <button class="btn-success" onclick="salvarCadastro('funcionarios', 'f')">Salvar</button>
+    <button class="btn-success" onclick="salvarCadastro('funcionarios', 'f')">Salvar e Limpar</button>
     <button onclick="fecharModal('mFunc')">Cancelar</button>
 </div></div>
 
 <script>
     const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-    let saldoAnteriorGlobal = 0; // Armazena em minutos
+    let saldoAnteriorGlobal = 0;
 
-    // Inicialização de Datas
+    // Inicialização
     const mesEl = document.getElementById("mes"), anoEl = document.getElementById("ano");
     const dNow = new Date();
     for(let i=1; i<=12; i++) mesEl.innerHTML += `<option value="${i}" ${i==dNow.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
@@ -152,68 +148,68 @@
     function abrirModal(id) { if(id === 'mFunc') popularSelectEmpresasModal(); document.getElementById(id).style.display='flex'; }
     function fecharModal(id) { document.getElementById(id).style.display='none'; }
 
-    // --- LOGICA DE SALDOS ACUMULADOS ---
+    // --- IMPORTAÇÃO DE ARQUIVO ---
+    function importarArquivo(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const lines = e.target.result.split('\n');
+            lines.forEach(line => {
+                const parts = line.split(/[;,]/); // Aceita vírgula ou ponto e vírgula
+                if (parts.length >= 2) {
+                    const dia = parseInt(parts[0]); // Primeira coluna é o dia
+                    const row = document.querySelector(`#tb tr:nth-child(${dia})`);
+                    if (row) {
+                        const inputs = row.querySelectorAll('input[type="time"]');
+                        if (parts[1]) inputs[0].value = parts[1].trim(); // Entrada
+                        if (parts[2]) inputs[1].value = parts[2].trim(); // Almoço
+                        if (parts[3]) inputs[2].value = parts[3].trim(); // Retorno
+                        if (parts[4]) inputs[3].value = parts[4].trim(); // Saída
+                    }
+                }
+            });
+            calc();
+            alert("Ponto importado com sucesso!");
+        };
+        reader.readAsText(file);
+    }
 
-    async function carregarSaldoAnterior() {
-        const emp = document.getElementById("empresa").value;
-        const func = document.getElementById("funcionario").value;
-        if(!emp || !func) return;
+    // --- SALVAR CADASTRO E LIMPAR ---
+    async function salvarCadastro(colecao, p) {
+        const modal = document.getElementById(p == 'e' ? 'mEmpresa' : 'mFunc');
+        const nome = document.getElementById(p+'Nome').value.trim();
+        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
+        if(!nome || !doc) return alert("Preencha Nome e Documento!");
 
-        let mesAnt = parseInt(mesEl.value) - 1;
-        let anoAnt = parseInt(anoEl.value);
+        const dados = { 
+            nome, doc, 
+            empresaVinculo: p=='f'?document.getElementById('fEmpresaVinculo').value:null, 
+            cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value, 
+            num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value, 
+            tel: document.getElementById(p+'Tel').value 
+        };
 
-        if(mesAnt === 0) { mesAnt = 12; anoAnt--; }
-
-        const keyAnt = `ponto_${emp}_${func}_${anoAnt}_${mesAnt}`;
-        
         try {
-            const doc = await db.collection("pontos").doc(keyAnt).get();
-            if(doc.exists) {
-                const dados = doc.data().dados;
-                saldoAnteriorGlobal = calcularSaldoDeDadosBrutos(dados);
-            } else {
-                saldoAnteriorGlobal = 0;
-            }
-            document.getElementById("sa").innerText = format(saldoAnteriorGlobal);
-            calc(); // Recalcula o acumulado com o novo saldo anterior
-        } catch(e) {
-            console.error("Erro ao buscar saldo anterior", e);
-        }
+            await db.collection(colecao).doc(nome).set(dados);
+            let cache = JSON.parse(localStorage.getItem(colecao) || "[]").filter(x => x.nome !== nome);
+            cache.push(dados);
+            localStorage.setItem(colecao, JSON.stringify(cache));
+            
+            alert("Salvo com sucesso!");
+            
+            // LIMPAR CAMPOS
+            modal.querySelectorAll('input').forEach(input => input.value = "");
+            fecharModal(p == 'e' ? 'mEmpresa' : 'mFunc');
+            atualizarSelectsPrincipais();
+        } catch(e) { alert("Erro ao salvar."); }
     }
 
-    // Função que calcula o saldo de um conjunto de dados sem mexer na UI
-    function calcularSaldoDeDadosBrutos(dados) {
-        const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
-        let cred = 0, deb = 0;
-        const semanasFalta = new Set();
-
-        // Simula o cálculo da tabela para o mês anterior
-        dados.forEach((dia, index) => {
-            let worked = 0;
-            const m1 = timeToMin(dia.e1), m2 = timeToMin(dia.s1), m3 = timeToMin(dia.e2), m4 = timeToMin(dia.s2);
-            if(m1 && m4) worked = (m2 && m3) ? (m2-m1)+(m4-m3) : (m4-m1);
-
-            let s = 0;
-            if(dia.tipo === "Atestado") s = 0;
-            else if(dia.tipo === "Atestado Horas") s = (worked + parseFloat(dia.obs || 0)*60) - cargaMin;
-            else if(dia.tipo === "Falta") { s = -cargaMin; semanasFalta.add(Math.floor(index/7)); }
-            else if(["Folga/FDS", "Feriado"].includes(dia.tipo)) s = worked;
-            else if(worked > 0) s = worked - cargaMin;
-
-            s > 0 ? cred += s : deb += Math.abs(s);
-        });
-
-        const dsr = semanasFalta.size * cargaMin;
-        return cred - deb - dsr;
-    }
-
-    // --- FUNÇÕES DE CÁLCULO E UI ---
-
+    // --- LÓGICA DE PONTO (MANTIDA) ---
     function calc() {
         let totalH = 0, credito = 0, debitoDiario = 0;
         const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
         const semanasComFalta = new Set();
-
         document.querySelectorAll("#tb tr").forEach(tr => {
             const ins = tr.querySelectorAll("input");
             const tipo = tr.querySelector("select").value;
@@ -221,80 +217,43 @@
             let worked = 0;
             const m1 = timeToMin(ins[0].value), m2 = timeToMin(ins[1].value), m3 = timeToMin(ins[2].value), m4 = timeToMin(ins[3].value);
             if(m1 && m4) worked = (m2 && m3) ? (m2-m1)+(m4-m3) : (m4-m1);
-
             let saldo = 0, totalExibido = worked;
             if(tipo === "Atestado") { totalExibido = cargaMin; saldo = 0; }
-            else if(tipo === "Atestado Horas") {
-                const abonadas = parseFloat(ins[4].value || 0) * 60;
-                totalExibido = worked + abonadas;
-                saldo = totalExibido - cargaMin;
-            } else if(tipo === "Falta") { totalExibido = 0; saldo = -cargaMin; semanasComFalta.add(weekNum); }
-            else if(tipo === "Folga/FDS" || tipo === "Feriado") { saldo = worked; }
+            else if(tipo === "Atestado Horas") { saldo = (worked + parseFloat(ins[4].value || 0) * 60) - cargaMin; totalExibido = worked + parseFloat(ins[4].value || 0) * 60; }
+            else if(tipo === "Falta") { totalExibido = 0; saldo = -cargaMin; semanasComFalta.add(weekNum); }
+            else if(["Folga/FDS", "Feriado"].includes(tipo)) { saldo = worked; }
             else if(worked > 0) saldo = worked - cargaMin;
-
             totalH += (tipo === "Normal" ? worked : 0);
             saldo > 0 ? credito += saldo : debitoDiario += Math.abs(saldo);
             tr.querySelector(".t").innerText = format(totalExibido);
             tr.querySelector(".s").innerText = format(saldo);
             tr.querySelector(".s").style.color = saldo > 0 ? "green" : (saldo < 0 ? "red" : "black");
         });
-
-        const dsrPerdidoMin = semanasComFalta.size * cargaMin;
-        const saldoMes = credito - debitoDiario - dsrPerdidoMin;
-        const saldoAcumulado = saldoAnteriorGlobal + saldoMes;
-
+        const dsr = semanasComFalta.size * cargaMin;
+        const saldoMes = credito - debitoDiario - dsr;
         document.getElementById("h").innerText = format(totalH);
         document.getElementById("c").innerText = format(credito);
         document.getElementById("d").innerText = format(debitoDiario);
-        document.getElementById("dsr").innerText = format(dsrPerdidoMin);
+        document.getElementById("dsr").innerText = format(dsr);
         document.getElementById("sm").innerText = format(saldoMes);
-        document.getElementById("sm").style.color = saldoMes >= 0 ? "green" : "red";
-        
-        const acEl = document.getElementById("ac");
-        acEl.innerText = format(saldoAcumulado);
-        acEl.style.color = saldoAcumulado >= 0 ? "#16a34a" : "#dc2626";
+        document.getElementById("sa").innerText = format(saldoAnteriorGlobal);
+        const acum = saldoMes + saldoAnteriorGlobal;
+        document.getElementById("ac").innerText = format(acum);
+        document.getElementById("ac").style.color = acum >= 0 ? "green" : "red";
     }
 
-    // --- CARREGAMENTO E SALVAMENTO ---
-
-    async function carregar() {
-        const emp = document.getElementById("empresa").value;
-        const func = document.getElementById("funcionario").value;
-        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
-        
-        await carregarSaldoAnterior();
-
-        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
-        const doc = await db.collection("pontos").doc(key).get();
-        if(doc.exists) {
-            const dados = doc.data().dados;
-            document.querySelectorAll("#tb tr").forEach((tr, i) => {
-                if(!dados[i]) return;
-                const ins = tr.querySelectorAll("input");
-                tr.querySelector("select").value = dados[i].tipo;
-                ins[0].value = dados[i].e1; ins[1].value = dados[i].s1;
-                ins[2].value = dados[i].e2; ins[3].value = dados[i].s2;
-                ins[4].value = dados[i].obs;
-            });
-            calc();
-        } else { alert("Nenhum dado encontrado para este mês."); gerar(); }
+    // --- AUXILIARES ---
+    function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
+    function format(minutos) {
+        const sign = minutos < 0 ? "-" : "";
+        const abs = Math.abs(Math.round(minutos));
+        return sign + String(Math.floor(abs/60)).padStart(2,'0') + ":" + String(abs%60).padStart(2,'0');
     }
-
-    async function salvarPonto() {
-        const emp = document.getElementById("empresa").value;
-        const func = document.getElementById("funcionario").value;
-        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
-        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
-        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
-            const ins = tr.querySelectorAll("input");
-            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value }
-        });
-        await db.collection("pontos").doc(key).set({dados});
-        alert("Ponto Salvo com Sucesso!");
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7);
     }
-
-    // --- DEMAIS FUNÇÕES AUXILIARES ---
-
     function gerar() {
         const mes = +mesEl.value, ano = +anoEl.value;
         const diasNoMes = new Date(ano, mes, 0).getDate();
@@ -315,7 +274,6 @@
         }
         calc();
     }
-
     function autoPreencher(select) {
         const tr = select.closest('tr');
         const inputs = tr.querySelectorAll('input[type="time"]');
@@ -327,59 +285,97 @@
         calc();
     }
 
-    function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
-    function format(minutos) {
-        const sign = minutos < 0 ? "-" : "";
-        const abs = Math.abs(Math.round(minutos));
-        return sign + String(Math.floor(abs/60)).padStart(2,'0') + ":" + String(abs%60).padStart(2,'0');
+    async function carregarSaldoAnterior() {
+        const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
+        if(!emp || !func) return;
+        let m = parseInt(mesEl.value) - 1, a = parseInt(anoEl.value);
+        if(m === 0) { m = 12; a--; }
+        const key = `ponto_${emp}_${func}_${a}_${m}`;
+        const doc = await db.collection("pontos").doc(key).get();
+        if(doc.exists) {
+            saldoAnteriorGlobal = calcularSaldoBruto(doc.data().dados);
+        } else { saldoAnteriorGlobal = 0; }
+        calc();
     }
-    function getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7);
+
+    function calcularSaldoBruto(dados) {
+        const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
+        let cred = 0, deb = 0; const faltas = new Set();
+        dados.forEach((d, i) => {
+            let worked = (timeToMin(d.s2) - timeToMin(d.e2)) + (timeToMin(d.s1) - timeToMin(d.e1));
+            if(!d.s1) worked = timeToMin(d.s2) - timeToMin(d.e1);
+            let s = 0;
+            if(d.tipo === "Atestado") s = 0;
+            else if(d.tipo === "Atestado Horas") s = (worked + parseFloat(d.obs || 0)*60) - cargaMin;
+            else if(d.tipo === "Falta") { s = -cargaMin; faltas.add(Math.floor(i/7)); }
+            else if(["Folga/FDS", "Feriado"].includes(d.tipo)) s = worked;
+            else if(worked > 0) s = worked - cargaMin;
+            s > 0 ? cred += s : deb += Math.abs(s);
+        });
+        return cred - deb - (faltas.size * cargaMin);
     }
-    function filtrarColaboradores(nomeEmpresa) {
-        document.getElementById("empresa").value = nomeEmpresa;
-        const selFunc = document.getElementById("selFunc");
-        if(!nomeEmpresa) { selFunc.innerHTML = `<option value="">Aguardando Empresa...</option>`; return; }
-        const filtrados = JSON.parse(localStorage.getItem('funcionarios') || "[]").filter(f => f.empresaVinculo === nomeEmpresa);
-        selFunc.innerHTML = `<option value="">Selecione o Colaborador...</option>`;
-        filtrados.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(f => selFunc.innerHTML += `<option value="${f.nome}">${f.nome}</option>`);
+
+    async function salvarPonto() {
+        const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
+        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
+        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
+        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
+            const ins = tr.querySelectorAll("input");
+            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value }
+        });
+        await db.collection("pontos").doc(key).set({dados});
+        alert("Salvo!");
     }
-    function selecionarColaborador(nomeFunc) { 
-        document.getElementById("funcionario").value = nomeFunc; 
-        carregarSaldoAnterior(); 
+
+    async function carregar() {
+        const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
+        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
+        await carregarSaldoAnterior();
+        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
+        const doc = await db.collection("pontos").doc(key).get();
+        if(doc.exists) {
+            const dados = doc.data().dados;
+            document.querySelectorAll("#tb tr").forEach((tr, i) => {
+                if(!dados[i]) return;
+                const ins = tr.querySelectorAll("input");
+                tr.querySelector("select").value = dados[i].tipo;
+                ins[0].value = dados[i].e1; ins[1].value = dados[i].s1;
+                ins[2].value = dados[i].e2; ins[3].value = dados[i].s2;
+                ins[4].value = dados[i].obs;
+            });
+            calc();
+        } else { alert("Nenhum dado."); gerar(); }
     }
+
     function popularSelectEmpresasModal() {
         const fEmp = document.getElementById("fEmpresaVinculo");
         fEmp.innerHTML = `<option value="">Escolha uma Empresa...</option>`;
         JSON.parse(localStorage.getItem('empresas') || "[]").forEach(e => fEmp.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
     }
-    async function salvarCadastro(colecao, p) {
-        const nome = document.getElementById(p+'Nome').value.trim();
-        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
-        if(!nome || !doc) return alert("Preencha Nome e Documento!");
-        const dados = { nome, doc, empresaVinculo: p=='f'?document.getElementById('fEmpresaVinculo').value:null, cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value, num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value, tel: document.getElementById(p+'Tel').value };
-        await db.collection(colecao).doc(nome).set(dados);
-        let cache = JSON.parse(localStorage.getItem(colecao) || "[]").filter(x => x.nome !== nome);
-        cache.push(dados); localStorage.setItem(colecao, JSON.stringify(cache));
-        fecharModal(p=='e'?'mEmpresa':'mFunc'); atualizarSelectsPrincipais();
+    function filtrarColaboradores(n) {
+        document.getElementById("empresa").value = n;
+        const sel = document.getElementById("selFunc");
+        if(!n) return sel.innerHTML = `<option>Aguardando...</option>`;
+        const fs = JSON.parse(localStorage.getItem('funcionarios') || "[]").filter(f => f.empresaVinculo === n);
+        sel.innerHTML = `<option value="">Selecione...</option>`;
+        fs.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(f => sel.innerHTML += `<option value="${f.nome}">${f.nome}</option>`);
     }
+    function selecionarColaborador(n) { document.getElementById("funcionario").value = n; carregarSaldoAnterior(); }
     function atualizarSelectsPrincipais() {
-        const selEmp = document.getElementById("selEmp");
-        selEmp.innerHTML = `<option value="">Selecione a Empresa...</option>`;
-        JSON.parse(localStorage.getItem('empresas') || "[]").sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(e => selEmp.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
+        const sel = document.getElementById("selEmp");
+        sel.innerHTML = `<option value="">Selecione a Empresa...</option>`;
+        JSON.parse(localStorage.getItem('empresas') || "[]").sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(e => sel.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
     }
-    async function buscaCNPJ(cnpj) {
-        cnpj = cnpj.replace(/\D/g,''); if(cnpj.length !== 14) return;
-        try { const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`); const data = await resp.json();
+    async function buscaCNPJ(c) {
+        c = c.replace(/\D/g,''); if(c.length !== 14) return;
+        try { const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); const data = await resp.json();
             document.getElementById('eNome').value = data.razao_social; document.getElementById('eCEP').value = data.cep;
             document.getElementById('eEnd').value = data.logradouro; document.getElementById('eEstado').value = data.uf; document.getElementById('eNum').value = data.numero;
         } catch(e) {}
     }
-    async function buscaCEP(cep, p) {
-        cep = cep.replace(/\D/g,''); if(cep.length != 8) return;
-        const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await resp.json();
+    async function buscaCEP(c, p) {
+        c = c.replace(/\D/g,''); if(c.length != 8) return;
+        const resp = await fetch(`https://viacep.com.br/ws/${c}/json/`); const data = await resp.json();
         if(!data.erro) { document.getElementById(p+'End').value = data.logradouro; document.getElementById(p+'Estado').value = data.uf; }
     }
 
