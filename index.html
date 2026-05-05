@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Ponto CLT - Pro v4</title>
+<title>Sistema de Ponto CLT - Pro v5</title>
 <style>
     :root { --primary: #2563eb; --dark: #0f172a; --bg: #f1f5f9; --danger: #ef4444; --purple: #8b5cf6; --excel: #1d6f42; }
     body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:#334155;}
@@ -119,9 +119,10 @@
 
         <hr style="width:100%;border:0;border-top:1px solid #e2e8f0; margin: 5px 0;">
 
-        <div style="display: flex; gap: 15px; width: 100%; flex-wrap: wrap;">
-            <div class="field-group"><label>EMPRESA ATIVA</label><input id="empresa" readonly></div>
-            <div class="field-group"><label>NOME COLABORADOR</label><input id="funcionario" readonly></div>
+        <!-- LINHA DE VISUALIZAÇÃO CORRIGIDA -->
+        <div style="display: flex; gap: 15px; width: 100%; flex-wrap: wrap; align-items: flex-end;">
+            <div class="field-group" style="flex: 2;"><label>EMPRESA ATIVA</label><input id="empresa" readonly></div>
+            <div class="field-group" style="flex: 2;"><label>NOME COLABORADOR</label><input id="funcionario" readonly></div>
             <div class="field-group" style="flex: 0; min-width: 100px;"><label>MÊS</label><select id="mes" onchange="gerar()"></select></div>
             <div class="field-group" style="flex: 0; min-width: 100px;"><label>ANO</label><select id="ano" onchange="gerar()"></select></div>
         </div>
@@ -156,24 +157,21 @@
     </table>
 </div>
 
-<!-- MODAL EMPRESA -->
+<!-- MODAIS -->
 <div id="mEmpresa" class="modal"><div class="modal-content">
     <h3>🏢 CADASTRAR NOVA EMPRESA</h3>
     <div class="grid-form">
         <input id="eCNPJ" class="full-w" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
         <input id="eNome" class="full-w" placeholder="RAZÃO SOCIAL">
         <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
-        <input id="eEstado" placeholder="UF">
-        <input id="eEnd" class="full-w" placeholder="LOGRADOURO">
-        <input id="eNum" placeholder="NÚMERO">
-        <input id="eTel" placeholder="TELEFONE">
+        <input id="eEstado" placeholder="UF"><input id="eEnd" class="full-w" placeholder="LOGRADOURO">
+        <input id="eNum" placeholder="NÚMERO"><input id="eTel" placeholder="TELEFONE">
         <input id="eSenha" class="full-w" type="password" placeholder="DEFINIR SENHA DE ACESSO">
     </div><br>
     <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">SALVAR</button>
     <button onclick="fecharModal('mEmpresa')">CANCELAR</button>
 </div></div>
 
-<!-- MODAL ALTERAR SENHA -->
 <div id="mSenha" class="modal"><div class="modal-content">
     <h3>🔑 ALTERAR SENHA DA EMPRESA</h3>
     <p id="labelEmpresaSenha" style="font-weight: bold; color: var(--primary);"></p>
@@ -184,7 +182,6 @@
     <button onclick="fecharModal('mSenha')">CANCELAR</button>
 </div></div>
 
-<!-- MODAL COLABORADOR -->
 <div id="mFunc" class="modal"><div class="modal-content">
     <h3>👤 CADASTRAR COLABORADOR</h3>
     <div class="grid-form">
@@ -203,58 +200,6 @@
     const MASTER_PASS = "admin123";
     let USUARIO_LOGADO = null;
 
-    // --- DELETAR COLABORADOR (MASTER ONLY) ---
-    async function deletarColaborador() {
-        const nomeColaborador = document.getElementById("selFunc").value;
-        const nomeEmpresa = document.getElementById("selEmp").value;
-
-        if(!nomeColaborador) return alert("Selecione um colaborador na lista primeiro!");
-
-        if(confirm(`⚠️ CUIDADO: Deseja realmente excluir permanentemente o colaborador "${nomeColaborador.toUpperCase()}"?`)) {
-            try {
-                await db.collection("funcionarios").doc(nomeColaborador).delete();
-                alert("✅ Colaborador removido com sucesso!");
-                
-                // Limpar campos e recarregar
-                document.getElementById("funcionario").value = "";
-                if(nomeEmpresa) filtrarColaboradores(nomeEmpresa); 
-            } catch(e) { alert("Erro ao deletar colaborador."); }
-        }
-    }
-
-    // --- SENHA MASTER ---
-    function abrirModalSenha() {
-        const emp = document.getElementById("selEmp").value;
-        if(!emp) return alert("Selecione uma empresa primeiro!");
-        document.getElementById("labelEmpresaSenha").innerText = "EMPRESA: " + emp.toUpperCase();
-        abrirModal('mSenha');
-    }
-
-    async function confirmarAlterarSenha() {
-        const emp = document.getElementById("selEmp").value;
-        const nova = document.getElementById("novaSenhaInput").value;
-        if(!nova) return alert("Digite a nova senha!");
-        try {
-            await db.collection("empresas").doc(emp).update({ senha: nova });
-            alert("✅ Senha alterada!");
-            fecharModal('mSenha');
-            document.getElementById("novaSenhaInput").value = "";
-        } catch(e) { alert("Erro."); }
-    }
-
-    // --- CARGA HORÁRIA ---
-    function calcularCargaAutomatica() {
-        const e1 = timeToMin(document.getElementById("bE1").value);
-        const s1 = timeToMin(document.getElementById("bS1").value);
-        const e2 = timeToMin(document.getElementById("bE2").value);
-        const s2 = timeToMin(document.getElementById("bS2").value);
-        let totalMin = 0;
-        if (e1 && s1) totalMin += (s1 - e1);
-        if (e2 && s2) totalMin += (s2 - e2);
-        document.getElementById("carga").value = (totalMin / 60).toFixed(2);
-        calc();
-    }
-
     // --- LOGIN ---
     async function tentarLogin() {
         const user = document.getElementById("loginUser").value;
@@ -272,8 +217,16 @@
     function configurarAcesso(tipo, nome) {
         USUARIO_LOGADO = { tipo, nome };
         document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("userInfo").innerText = `SESSÃO: ${nome.toUpperCase()}`;
+        document.getElementById("userInfo").innerText = `SESSÃO ATIVA: ${nome.toUpperCase()}`;
+        
+        // LIMPEZA OBRIGATÓRIA AO LOGAR
+        document.getElementById("funcionario").value = "";
+        document.getElementById("selFunc").innerHTML = '<option value="">SELECIONE...</option>';
+        document.getElementById("empresa").value = (tipo === "EMPRESA") ? nome.toUpperCase() : "";
+
         if(tipo === "MASTER") document.querySelectorAll(".master-only").forEach(el => el.style.display = "inline-flex");
+        else document.querySelectorAll(".master-only").forEach(el => el.style.display = "none");
+        
         atualizarSelectsPrincipais();
         gerar();
         calcularCargaAutomatica();
@@ -281,93 +234,38 @@
 
     function logout() { location.reload(); }
 
-    // --- CADASTROS ---
-    async function salvarCadastro(colecao, p) {
-        const nome = document.getElementById(p+'Nome').value.trim().toUpperCase();
-        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
-        if(!nome || !doc) return alert("Preencha Nome e Doc!");
+    // --- FILTRAGEM ---
+    async function filtrarColaboradores(n) {
+        document.getElementById("empresa").value = n.toUpperCase();
+        // LIMPAR CAMPO COLABORADOR AO TROCAR EMPRESA
+        document.getElementById("funcionario").value = "";
         
-        const dados = { 
-            nome, doc, 
-            empresaVinculo: p == 'f' ? (USUARIO_LOGADO.tipo === "EMPRESA" ? USUARIO_LOGADO.nome : document.getElementById('fEmpresaVinculo').value) : null,
-            cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value.toUpperCase(),
-            num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value.toUpperCase(),
-            tel: document.getElementById(p+'Tel').value 
-        };
-        if(p == 'e') dados.senha = document.getElementById('eSenha').value;
-
-        try {
-            await db.collection(colecao).doc(nome).set(dados);
-            alert("✅ Salvo!");
-            document.querySelectorAll(`#m${p === 'e' ? 'Empresa' : 'Func'} input`).forEach(i => i.value = "");
-            fecharModal(p=='e'?'mEmpresa':'mFunc');
-            atualizarSelectsPrincipais();
-            carregarEmpresasNoLogin();
-        } catch(e) { alert("Erro ao salvar."); }
+        const sel = document.getElementById("selFunc");
+        sel.innerHTML = `<option value="">CARREGANDO...</option>`;
+        
+        const snap = await db.collection("funcionarios").where("empresaVinculo", "==", n).get();
+        sel.innerHTML = `<option value="">SELECIONE O COLABORADOR...</option>`;
+        snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome.toUpperCase()}</option>`; });
     }
 
-    // --- TABELA E CALCULOS ---
-    function gerar() {
-        const mes = +document.getElementById("mes").value, ano = +document.getElementById("ano").value;
-        const dias = new Date(ano, mes, 0).getDate();
-        const tb = document.getElementById("tb"); tb.innerHTML = "";
-        for(let i=1; i<=dias; i++) {
-            const d = new Date(ano, mes-1, i);
-            const tr = document.createElement("tr");
-            tr.setAttribute('data-week', Math.ceil(i/7));
-            if(d.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
-            tr.innerHTML = `<td>${String(i).padStart(2,'0')}</td><td>${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"][d.getDay()]}</td>
-                <td><select onchange="autoPreencher(this)"><option>NORMAL</option><option ${d.getDay()==0||d.getDay()==6?'selected':''}>FOLGA/FDS</option><option>FERIADO</option><option>ATESTADO</option><option>ATESTADO HORAS</option><option>FALTA</option></select></td>
-                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
-                <td class="t">00:00</td><td class="s">00:00</td><td><input style="text-transform:none" type="text" oninput="calc()"></td>`;
-            tb.appendChild(tr);
-        }
+    function selecionarColaborador(n) { 
+        document.getElementById("funcionario").value = n.toUpperCase(); 
+    }
+
+    // --- CARGA HORÁRIA ---
+    function calcularCargaAutomatica() {
+        const e1 = timeToMin(document.getElementById("bE1").value);
+        const s1 = timeToMin(document.getElementById("bS1").value);
+        const e2 = timeToMin(document.getElementById("bE2").value);
+        const s2 = timeToMin(document.getElementById("bS2").value);
+        let totalMin = 0;
+        if (e1 && s1) totalMin += (s1 - e1);
+        if (e2 && s2) totalMin += (s2 - e2);
+        document.getElementById("carga").value = (totalMin / 60).toFixed(2);
         calc();
     }
 
-    // --- IMPORTAÇÃO E EXCEL ---
-    function exportarExcel() {
-        const emp = document.getElementById("empresa").value;
-        const func = document.getElementById("funcionario").value;
-        if(!func) return alert("Selecione um colaborador!");
-        let csv = `RELATORIO DE PONTO;${func};EMPRESA;${emp}\n\nDIA;SEMANA;TIPO;ENTRADA;ALMOCO;RETORNO;SAIDA;TOTAL;SALDO;OBS\n`;
-        document.querySelectorAll("#tb tr").forEach(tr => {
-            const tds = tr.querySelectorAll("td");
-            const inputs = tr.querySelectorAll("input");
-            csv += `${tds[0].innerText};${tds[1].innerText};${tr.querySelector("select").value};${inputs[0].value};${inputs[1].value};${inputs[2].value};${inputs[3].value};${tds[7].innerText};${tds[8].innerText};${inputs[4].value}\n`;
-        });
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
-        link.download = `PONTO_${func}.csv`; link.click();
-    }
-
-    function importarArquivo(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const lines = e.target.result.split('\n');
-            lines.forEach(line => {
-                const parts = line.split(/[;,]/);
-                if (parts.length >= 2) {
-                    const dia = parseInt(parts[0]);
-                    const row = document.querySelector(`#tb tr:nth-child(${dia})`);
-                    if (row) {
-                        const inputs = row.querySelectorAll('input[type="time"]');
-                        if (parts[1]) inputs[0].value = parts[1].trim();
-                        if (parts[2]) inputs[1].value = parts[2].trim();
-                        if (parts[3]) inputs[2].value = parts[3].trim();
-                        if (parts[4]) inputs[3].value = parts[4].trim();
-                    }
-                }
-            });
-            calc();
-            alert("✅ Dados importados!");
-        };
-        reader.readAsText(file);
-    }
-
-    // --- AUXILIARES ---
+    // --- CÁLCULOS E TABELA ---
     function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
     function format(min) { const s = min<0?"-":""; const a = Math.abs(Math.round(min)); return s+String(Math.floor(a/60)).padStart(2,'0')+":"+String(a%60).padStart(2,'0'); }
 
@@ -393,6 +291,25 @@
         document.getElementById("ac").innerText=format(sm);
     }
 
+    function gerar() {
+        const mes = +document.getElementById("mes").value, ano = +document.getElementById("ano").value;
+        const dias = new Date(ano, mes, 0).getDate();
+        const tb = document.getElementById("tb"); tb.innerHTML = "";
+        for(let i=1; i<=dias; i++) {
+            const d = new Date(ano, mes-1, i);
+            const tr = document.createElement("tr");
+            tr.setAttribute('data-week', Math.ceil(i/7));
+            if(d.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
+            tr.innerHTML = `<td>${String(i).padStart(2,'0')}</td><td>${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"][d.getDay()]}</td>
+                <td><select onchange="autoPreencher(this)"><option>NORMAL</option><option ${d.getDay()==0||d.getDay()==6?'selected':''}>FOLGA/FDS</option><option>FERIADO</option><option>ATESTADO</option><option>ATESTADO HORAS</option><option>FALTA</option></select></td>
+                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
+                <td class="t">00:00</td><td class="s">00:00</td><td><input style="text-transform:none" type="text" oninput="calc()"></td>`;
+            tb.appendChild(tr);
+        }
+        calc();
+    }
+
+    // --- OUTRAS FUNÇÕES (MANTIDAS) ---
     function autoPreencher(s) {
         const tr = s.closest('tr'); const ins = tr.querySelectorAll('input[type="time"]');
         if(["FOLGA/FDS","FERIADO","ATESTADO"].includes(s.value)) {
@@ -400,6 +317,26 @@
             ins[2].value = document.getElementById("bE2").value; ins[3].value = document.getElementById("bS2").value;
         } else if (s.value === "NORMAL" || s.value === "FALTA") ins.forEach(i => i.value = "");
         calc();
+    }
+
+    async function salvarCadastro(colecao, p) {
+        const nome = document.getElementById(p+'Nome').value.trim().toUpperCase();
+        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
+        if(!nome || !doc) return alert("Preencha Nome e Doc!");
+        const dados = { nome, doc, empresaVinculo: p == 'f' ? (USUARIO_LOGADO.tipo === "EMPRESA" ? USUARIO_LOGADO.nome : document.getElementById('fEmpresaVinculo').value) : null, cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value.toUpperCase(), num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value.toUpperCase(), tel: document.getElementById(p+'Tel').value };
+        if(p == 'e') dados.senha = document.getElementById('eSenha').value;
+        await db.collection(colecao).doc(nome).set(dados);
+        alert("✅ Salvo!");
+        document.querySelectorAll(`#m${p === 'e' ? 'Empresa' : 'Func'} input`).forEach(i => i.value = "");
+        fecharModal(p=='e'?'mEmpresa':'mFunc');
+        atualizarSelectsPrincipais();
+        carregarEmpresasNoLogin();
+    }
+
+    async function deletarColaborador() {
+        const colab = document.getElementById("selFunc").value;
+        if(!colab) return alert("Selecione!");
+        if(confirm(`Excluir ${colab}?`)) { await db.collection("funcionarios").doc(colab).delete(); alert("Removido!"); filtrarColaboradores(document.getElementById("selEmp").value || USUARIO_LOGADO.nome); }
     }
 
     async function carregarEmpresasNoLogin() {
@@ -416,54 +353,19 @@
         snap.forEach(doc => {
             const emp = doc.data().nome;
             if(USUARIO_LOGADO.tipo === "EMPRESA") { if(emp === USUARIO_LOGADO.nome) { selEmp.innerHTML = `<option value="${emp}">${emp}</option>`; selEmp.value = emp; selEmp.disabled = true; filtrarColaboradores(emp); } }
-            else { selEmp.innerHTML += `<option value="${emp}">${emp}</option>`; }
+            else { selEmp.innerHTML += `<option value="${emp}">${emp}</option>`; selEmp.disabled = false;}
         });
     }
 
-    async function filtrarColaboradores(n) {
-        document.getElementById("empresa").value = n;
-        const sel = document.getElementById("selFunc"); sel.innerHTML = `<option value="">CARREGANDO...</option>`;
-        const snap = await db.collection("funcionarios").where("empresaVinculo", "==", n).get();
-        sel.innerHTML = `<option value="">SELECIONE...</option>`;
-        snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; });
-    }
-
-    async function salvarPonto() {
-        const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
-        if(!emp||!func) return alert("Selecione!");
-        const key = `ponto_${emp.toLowerCase()}_${func.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`;
-        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
-            const ins = tr.querySelectorAll("input");
-            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value }
-        });
-        await db.collection("pontos").doc(key).set({dados});
-        alert("✅ Ponto salvo!");
-    }
-
-    async function carregar() {
-        const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
-        if(!emp||!func) return alert("Selecione!");
-        const key = `ponto_${emp.toLowerCase()}_${func.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`;
-        const doc = await db.collection("pontos").doc(key).get();
-        if(doc.exists) {
-            const dados = doc.data().dados;
-            document.querySelectorAll("#tb tr").forEach((tr, i) => {
-                if(!dados[i]) return;
-                const ins = tr.querySelectorAll("input");
-                tr.querySelector("select").value = dados[i].tipo;
-                ins[0].value=dados[i].e1; ins[1].value=dados[i].s1; ins[2].value=dados[i].e2; ins[3].value=dados[i].s2; ins[4].value=dados[i].obs;
-            });
-            calc();
-        } else { alert("Sem dados."); gerar(); }
-    }
-
-    function popularSelectEmpresasModal() {
-        const fEmp = document.getElementById("fEmpresaVinculo");
-        if(USUARIO_LOGADO.tipo === "EMPRESA") { fEmp.innerHTML = `<option value="${USUARIO_LOGADO.nome}">${USUARIO_LOGADO.nome.toUpperCase()}</option>`; fEmp.disabled = true; }
-        else { fEmp.disabled = false; fEmp.innerHTML = ""; db.collection("empresas").get().then(s => s.forEach(d => fEmp.innerHTML += `<option value="${d.data().nome}">${d.data().nome.toUpperCase()}</option>`)); }
-    }
-    
-    function selecionarColaborador(n) { document.getElementById("funcionario").value = n; }
+    // Funções extras (CEP, CNPJ, Senha, Ponto, Excel, Import) resumidas para brevidade
+    function abrirModalSenha() { const emp = document.getElementById("selEmp").value; if(!emp) return alert("Selecione!"); document.getElementById("labelEmpresaSenha").innerText = emp.toUpperCase(); abrirModal('mSenha'); }
+    async function confirmarAlterarSenha() { const emp = document.getElementById("selEmp").value; const nova = document.getElementById("novaSenhaInput").value; if(!nova) return; await db.collection("empresas").doc(emp).update({ senha: nova }); alert("✅ Sucesso!"); fecharModal('mSenha'); }
+    async function deletarEmpresa() { const n = document.getElementById("selEmp").value; if(!n) return; if(confirm(`Deletar ${n}?`)) { await db.collection("empresas").doc(n).delete(); logout(); } }
+    async function salvarPonto() { const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value; if(!e||!f) return alert("Selecione!"); const key = `ponto_${e.toLowerCase()}_${f.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`; const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => { const ins = tr.querySelectorAll("input"); return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value } }); await db.collection("pontos").doc(key).set({dados}); alert("✅ Salvo!"); }
+    async function carregar() { const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value; if(!e||!f) return alert("Selecione!"); const key = `ponto_${e.toLowerCase()}_${f.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`; const doc = await db.collection("pontos").doc(key).get(); if(doc.exists) { const d = doc.data().dados; document.querySelectorAll("#tb tr").forEach((tr, i) => { if(!d[i]) return; const ins = tr.querySelectorAll("input"); tr.querySelector("select").value = d[i].tipo; ins[0].value=d[i].e1; ins[1].value=d[i].s1; ins[2].value=d[i].e2; ins[3].value=d[i].s2; ins[4].value=d[i].obs; }); calc(); } else { alert("Sem dados."); gerar(); } }
+    function exportarExcel() { const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value; if(!f) return alert("Selecione!"); let csv = `RELATORIO;${f};EMPRESA;${e}\n\nDIA;SEMANA;TIPO;ENTRADA;ALMOCO;RETORNO;SAIDA;TOTAL;SALDO;OBS\n`; document.querySelectorAll("#tb tr").forEach(tr => { const tds = tr.querySelectorAll("td"), ins = tr.querySelectorAll("input"); csv += `${tds[0].innerText};${tds[1].innerText};${tr.querySelector("select").value};${ins[0].value};${ins[1].value};${ins[2].value};${ins[3].value};${tds[7].innerText};${tds[8].innerText};${ins[4].value}\n`; }); const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `PONTO_${f}.csv`; link.click(); }
+    function importarArquivo(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { const lines = e.target.result.split('\n'); lines.forEach(line => { const parts = line.split(/[;,]/); if (parts.length >= 2) { const dia = parseInt(parts[0]); const row = document.querySelector(`#tb tr:nth-child(${dia})`); if (row) { const inputs = row.querySelectorAll('input[type="time"]'); if (parts[1]) inputs[0].value = parts[1].trim(); if (parts[2]) inputs[1].value = parts[2].trim(); if (parts[3]) inputs[2].value = parts[3].trim(); if (parts[4]) inputs[3].value = parts[4].trim(); } } }); calc(); alert("✅ Importado!"); }; reader.readAsText(file); }
+    function popularSelectEmpresasModal() { const f = document.getElementById("fEmpresaVinculo"); if(USUARIO_LOGADO.tipo === "EMPRESA") { f.innerHTML = `<option value="${USUARIO_LOGADO.nome}">${USUARIO_LOGADO.nome.toUpperCase()}</option>`; f.disabled = true; } else { f.disabled = false; f.innerHTML = ""; db.collection("empresas").get().then(s => s.forEach(d => f.innerHTML += `<option value="${d.data().nome}">${d.data().nome.toUpperCase()}</option>`)); } }
     function mascaraCPF(i) { let v = i.value.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); i.value = v; }
     async function buscaCNPJ(c) { c=c.replace(/\D/g,''); if(c.length!==14) return; const r=await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); const d=await r.json(); document.getElementById('eNome').value=d.razao_social.toUpperCase(); document.getElementById('eCEP').value=d.cep; document.getElementById('eEnd').value=d.logradouro.toUpperCase(); document.getElementById('eEstado').value=d.uf; document.getElementById('eNum').value=d.numero; }
     async function buscaCEP(c, p) { c=c.replace(/\D/g,''); if(c.length!==8) return; const r=await fetch(`https://viacep.com.br/ws/${c}/json/`); const d=await r.json(); if(!d.erro){document.getElementById(p+'End').value=d.logradouro.toUpperCase(); document.getElementById(p+'Estado').value=d.uf.toUpperCase();} }
