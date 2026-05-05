@@ -3,31 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Controle de Ponto</title>
+<title>Controle de Ponto CLT - Saldo Acumulado</title>
 <style>
-    body{margin:0;font-family:Segoe UI;background:#eef2f7;}
-    .header{background:#1e293b;color:white;padding:15px;text-align:center;}
-    .container{padding:15px;}
-    .top-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
-    input,select{padding:8px;border:1px solid #ccc;border-radius:5px;}
-    button{padding:8px 12px;border:none;border-radius:5px;cursor:pointer;background:#2563eb;color:white;}
-    .cards{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
-    .card{flex:1;background:white;padding:10px;border-radius:6px;text-align:center;border:1px solid #ddd;min-width:100px;}
-    .credito{color:#16a34a;}
-    .debito{color:#dc2626;}
-    table{width:100%;border-collapse:collapse;background:white;}
-    th{background:#334155;color:white;padding:8px;}
-    td{padding:6px;text-align:center;border-bottom:1px solid #ddd;}
-    .hoje{background:#e0f2fe !important;}
-    .obs{width:150px;}
+    body{margin:0;font-family:'Segoe UI',sans-serif;background:#f1f5f9;color:#334155;}
+    .header{background:#0f172a;color:white;padding:15px;text-align:center;font-weight:bold;}
+    .container{padding:20px;}
+    .top-controls{display:flex;gap:10px;flex-wrap:wrap;background:white;padding:20px;border-radius:10px;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);margin-bottom:20px;}
+    .base-schedule{display:flex; gap:5px; align-items:center; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-top:10px; width:100%;}
+    input,select{padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px; min-width: 150px;}
+    button{padding:10px 15px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:0.2s;}
+    .btn-primary{background:#2563eb;color:white;}
+    .btn-success{background:#16a34a;color:white;}
+    .btn-dark{background:#334155;color:white;}
     
-    /* Responsividade básica para tabela */
-    @media (max-width: 768px) {
-        .container { overflow-x: auto; }
-    }
+    .cards{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;}
+    .card{flex:1;background:white;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.05);min-width:120px;}
+    .card b{display:block;font-size:1.4rem;margin-top:5px;}
+    .credito{color:#16a34a;} .debito{color:#dc2626;}
+
+    table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);}
+    th{background:#1e293b;color:white;padding:12px;font-size:13px;}
+    td{padding:8px;text-align:center;border-bottom:1px solid #f1f5f9;}
+    .hoje{background:#eff6ff !important;outline:2px solid #3b82f6;}
+    
+    .modal{display:none;position:fixed;z-index:100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;}
+    .modal-content{background:white;padding:25px;border-radius:12px;width:90%;max-width:500px;}
+    .grid-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .full-w{grid-column: span 2;}
+    label{font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;}
 </style>
 
-<!-- 🔥 FIREBASE PRIMEIRO -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -36,36 +41,56 @@
         authDomain: "controle-ponto-1fb12.firebaseapp.com",
         projectId: "controle-ponto-1fb12"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 </script>
 </head>
 <body>
 
-<div class="header">Sistema de Controle de Ponto</div>
+<div class="header">SISTEMA DE CONTROLE DE PONTO CLT</div>
 
 <div class="container">
     <div class="top-controls">
-        <input id="empresa" placeholder="Empresa">
-        <input id="funcionario" placeholder="Funcionário">
-        <select id="mes"></select>
-        <select id="ano"></select>
-        <input id="carga" placeholder="Horas/dia (ex: 8)" value="8" style="width:130px">
-        <button onclick="carregar()">Carregar</button>
-        <button onclick="salvar()">Salvar</button>
-        <!-- <button onclick="exportarCSV()">Exportar</button> -->
-        <button onclick="padrao()">Padrão</button>
-        <button onclick="limpar()">Limpar</button>
+        <button class="btn-dark" onclick="abrirModal('mEmpresa')">🏢 Nova Empresa</button>
+        <button class="btn-dark" onclick="abrirModal('mFunc')">👤 Novo Colaborador</button>
+        
+        <div style="display:flex; gap:10px; width:100%; flex-wrap:wrap">
+            <select id="selEmp" onchange="filtrarColaboradores(this.value)">
+                <option value="">Selecione a Empresa...</option>
+            </select>
+            <select id="selFunc" onchange="selecionarColaborador(this.value)">
+                <option value="">Aguardando Empresa...</option>
+            </select>
+        </div>
+
+        <div class="base-schedule">
+            <span style="font-size:12px; font-weight:bold; color:#64748b">HORÁRIO BASE:</span>
+            <input type="time" id="bE1" value="08:00">
+            <input type="time" id="bS1" value="12:00">
+            <input type="time" id="bE2" value="13:00">
+            <input type="time" id="bS2" value="17:00">
+            <input id="carga" type="number" value="8" style="width:50px" oninput="calc()"> <small>hrs/dia</small>
+        </div>
+
+        <hr style="width:100%;border:0;border-top:1px solid #e2e8f0">
+
+        <input id="empresa" placeholder="Empresa" readonly style="background:#f1f5f9">
+        <input id="funcionario" placeholder="Funcionário" readonly style="background:#f1f5f9">
+        <select id="mes" onchange="gerar(); carregarSaldoAnterior();"></select>
+        <select id="ano" onchange="gerar(); carregarSaldoAnterior();"></select>
+        
+        <button class="btn-primary" onclick="carregar()">🔄 Carregar Ponto</button>
+        <button class="btn-success" onclick="salvarPonto()">💾 Salvar Ponto</button>
     </div>
 
     <div class="cards">
         <div class="card">Trabalhado<br><b id="h">00:00</b></div>
         <div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
         <div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
-        <div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
+        <div class="card">DSR Perdido<br><b id="dsr" style="color:#f59e0b">00:00</b></div>
         <div class="card">Saldo Anterior<br><b id="sa">00:00</b></div>
-        <div class="card">Saldo Acum.<br><b id="ac">00:00</b></div>
+        <div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
+        <div class="card" style="background:#e2e8f0">Saldo Acumulado<br><b id="ac">00:00</b></div>
     </div>
 
     <table>
@@ -73,274 +98,292 @@
             <tr>
                 <th>Dia</th>
                 <th>Sem</th>
-                <th>Tipo</th>
+                <th>Tipo de Jornada</th>
                 <th>Entrada</th>
-                <th>Saída Almoço</th>
-                <th>Volta</th>
+                <th>Almoço</th>
+                <th>Retorno</th>
                 <th>Saída</th>
                 <th>Total</th>
                 <th>Saldo</th>
-                <th>Observação</th>
+                <th>Obs/H. Abonadas</th>
             </tr>
         </thead>
         <tbody id="tb"></tbody>
     </table>
 </div>
 
+<!-- MODAIS (EMPRESA E FUNCIONARIO) MANTIDOS -->
+<div id="mEmpresa" class="modal"><div class="modal-content">
+    <h3>🏢 Cadastrar Empresa</h3>
+    <div class="grid-form">
+        <input id="eCNPJ" class="full-w" style="border: 2px solid #2563eb" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
+        <input id="eNome" class="full-w" placeholder="Razão Social">
+        <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
+        <input id="eEstado" placeholder="UF"><input id="eEnd" class="full-w" placeholder="Logradouro">
+        <input id="eNum" placeholder="Número"><input id="eTel" placeholder="Telefone">
+    </div><br>
+    <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">Salvar</button>
+    <button onclick="fecharModal('mEmpresa')">Cancelar</button>
+</div></div>
+
+<div id="mFunc" class="modal"><div class="modal-content">
+    <h3>👤 Cadastrar Colaborador</h3>
+    <div class="grid-form">
+        <div class="full-w"><label>Vincular à Empresa:</label><br><select id="fEmpresaVinculo" style="width:100%"></select></div>
+        <input id="fNome" class="full-w" placeholder="Nome Completo"><input id="fCPF" placeholder="CPF">
+        <input id="fCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'f')">
+        <input id="fEstado" placeholder="UF"><input id="fEnd" class="full-w" placeholder="Endereço">
+        <input id="fNum" placeholder="Número"><input id="fTel" placeholder="Telefone">
+    </div><br>
+    <button class="btn-success" onclick="salvarCadastro('funcionarios', 'f')">Salvar</button>
+    <button onclick="fecharModal('mFunc')">Cancelar</button>
+</div></div>
+
 <script>
-    const diasSemana =["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    let saldoAnteriorGlobal = 0; // Armazena em minutos
 
-    const mesEl = document.getElementById("mes");
-    const anoEl = document.getElementById("ano");
-    const empresaEl = document.getElementById("empresa");
-    const funcionarioEl = document.getElementById("funcionario");
-    const cargaEl = document.getElementById("carga");
-    const tb = document.getElementById("tb");
+    // Inicialização de Datas
+    const mesEl = document.getElementById("mes"), anoEl = document.getElementById("ano");
+    const dNow = new Date();
+    for(let i=1; i<=12; i++) mesEl.innerHTML += `<option value="${i}" ${i==dNow.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
+    for(let i=2023; i<=2030; i++) anoEl.innerHTML += `<option value="${i}" ${i==dNow.getFullYear()?'selected':''}>${i}</option>`;
 
-    // Elementos dos Cards
-    const elH = document.getElementById("h");
-    const elC = document.getElementById("c");
-    const elD = document.getElementById("d");
-    const elSM = document.getElementById("sm");
-    const elSA = document.getElementById("sa");
-    const elAC = document.getElementById("ac");
+    function abrirModal(id) { if(id === 'mFunc') popularSelectEmpresasModal(); document.getElementById(id).style.display='flex'; }
+    function fecharModal(id) { document.getElementById(id).style.display='none'; }
 
-    // Data Atual para auto-selecionar
-    const dataAtual = new Date();
-    const mesAtual = dataAtual.getMonth() + 1;
-    const anoAtual = dataAtual.getFullYear();
+    // --- LOGICA DE SALDOS ACUMULADOS ---
 
-    // Preencher Meses (COM CRASE CORRETA)
-    for(let m=1; m<=12; m++) {
-        const selecionado = (m === mesAtual) ? "selected" : "";
-        mesEl.innerHTML += `<option value="${m}" ${selecionado}>${String(m).padStart(2,'0')}</option>`;
+    async function carregarSaldoAnterior() {
+        const emp = document.getElementById("empresa").value;
+        const func = document.getElementById("funcionario").value;
+        if(!emp || !func) return;
+
+        let mesAnt = parseInt(mesEl.value) - 1;
+        let anoAnt = parseInt(anoEl.value);
+
+        if(mesAnt === 0) { mesAnt = 12; anoAnt--; }
+
+        const keyAnt = `ponto_${emp}_${func}_${anoAnt}_${mesAnt}`;
+        
+        try {
+            const doc = await db.collection("pontos").doc(keyAnt).get();
+            if(doc.exists) {
+                const dados = doc.data().dados;
+                saldoAnteriorGlobal = calcularSaldoDeDadosBrutos(dados);
+            } else {
+                saldoAnteriorGlobal = 0;
+            }
+            document.getElementById("sa").innerText = format(saldoAnteriorGlobal);
+            calc(); // Recalcula o acumulado com o novo saldo anterior
+        } catch(e) {
+            console.error("Erro ao buscar saldo anterior", e);
+        }
     }
-    // Preencher Anos (COM CRASE CORRETA)
-    for(let a=2020; a<=2030; a++) {
-        const selecionado = (a === anoAtual) ? "selected" : "";
-        anoEl.innerHTML += `<option value="${a}" ${selecionado}>${a}</option>`;
+
+    // Função que calcula o saldo de um conjunto de dados sem mexer na UI
+    function calcularSaldoDeDadosBrutos(dados) {
+        const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
+        let cred = 0, deb = 0;
+        const semanasFalta = new Set();
+
+        // Simula o cálculo da tabela para o mês anterior
+        dados.forEach((dia, index) => {
+            let worked = 0;
+            const m1 = timeToMin(dia.e1), m2 = timeToMin(dia.s1), m3 = timeToMin(dia.e2), m4 = timeToMin(dia.s2);
+            if(m1 && m4) worked = (m2 && m3) ? (m2-m1)+(m4-m3) : (m4-m1);
+
+            let s = 0;
+            if(dia.tipo === "Atestado") s = 0;
+            else if(dia.tipo === "Atestado Horas") s = (worked + parseFloat(dia.obs || 0)*60) - cargaMin;
+            else if(dia.tipo === "Falta") { s = -cargaMin; semanasFalta.add(Math.floor(index/7)); }
+            else if(["Folga/FDS", "Feriado"].includes(dia.tipo)) s = worked;
+            else if(worked > 0) s = worked - cargaMin;
+
+            s > 0 ? cred += s : deb += Math.abs(s);
+        });
+
+        const dsr = semanasFalta.size * cargaMin;
+        return cred - deb - dsr;
     }
 
-    // Chave para salvar no banco/localstorage
-    function getKey(mesVal, anoVal) {
-        const emp = empresaEl.value.trim().toLowerCase() || "empresa";
-        const func = funcionarioEl.value.trim().toLowerCase() || "func";
-        return `ponto_${emp}_${func}_${anoVal}_${mesVal}`;
+    // --- FUNÇÕES DE CÁLCULO E UI ---
+
+    function calc() {
+        let totalH = 0, credito = 0, debitoDiario = 0;
+        const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
+        const semanasComFalta = new Set();
+
+        document.querySelectorAll("#tb tr").forEach(tr => {
+            const ins = tr.querySelectorAll("input");
+            const tipo = tr.querySelector("select").value;
+            const weekNum = tr.getAttribute('data-week');
+            let worked = 0;
+            const m1 = timeToMin(ins[0].value), m2 = timeToMin(ins[1].value), m3 = timeToMin(ins[2].value), m4 = timeToMin(ins[3].value);
+            if(m1 && m4) worked = (m2 && m3) ? (m2-m1)+(m4-m3) : (m4-m1);
+
+            let saldo = 0, totalExibido = worked;
+            if(tipo === "Atestado") { totalExibido = cargaMin; saldo = 0; }
+            else if(tipo === "Atestado Horas") {
+                const abonadas = parseFloat(ins[4].value || 0) * 60;
+                totalExibido = worked + abonadas;
+                saldo = totalExibido - cargaMin;
+            } else if(tipo === "Falta") { totalExibido = 0; saldo = -cargaMin; semanasComFalta.add(weekNum); }
+            else if(tipo === "Folga/FDS" || tipo === "Feriado") { saldo = worked; }
+            else if(worked > 0) saldo = worked - cargaMin;
+
+            totalH += (tipo === "Normal" ? worked : 0);
+            saldo > 0 ? credito += saldo : debitoDiario += Math.abs(saldo);
+            tr.querySelector(".t").innerText = format(totalExibido);
+            tr.querySelector(".s").innerText = format(saldo);
+            tr.querySelector(".s").style.color = saldo > 0 ? "green" : (saldo < 0 ? "red" : "black");
+        });
+
+        const dsrPerdidoMin = semanasComFalta.size * cargaMin;
+        const saldoMes = credito - debitoDiario - dsrPerdidoMin;
+        const saldoAcumulado = saldoAnteriorGlobal + saldoMes;
+
+        document.getElementById("h").innerText = format(totalH);
+        document.getElementById("c").innerText = format(credito);
+        document.getElementById("d").innerText = format(debitoDiario);
+        document.getElementById("dsr").innerText = format(dsrPerdidoMin);
+        document.getElementById("sm").innerText = format(saldoMes);
+        document.getElementById("sm").style.color = saldoMes >= 0 ? "green" : "red";
+        
+        const acEl = document.getElementById("ac");
+        acEl.innerText = format(saldoAcumulado);
+        acEl.style.color = saldoAcumulado >= 0 ? "#16a34a" : "#dc2626";
     }
+
+    // --- CARREGAMENTO E SALVAMENTO ---
+
+    async function carregar() {
+        const emp = document.getElementById("empresa").value;
+        const func = document.getElementById("funcionario").value;
+        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
+        
+        await carregarSaldoAnterior();
+
+        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
+        const doc = await db.collection("pontos").doc(key).get();
+        if(doc.exists) {
+            const dados = doc.data().dados;
+            document.querySelectorAll("#tb tr").forEach((tr, i) => {
+                if(!dados[i]) return;
+                const ins = tr.querySelectorAll("input");
+                tr.querySelector("select").value = dados[i].tipo;
+                ins[0].value = dados[i].e1; ins[1].value = dados[i].s1;
+                ins[2].value = dados[i].e2; ins[3].value = dados[i].s2;
+                ins[4].value = dados[i].obs;
+            });
+            calc();
+        } else { alert("Nenhum dado encontrado para este mês."); gerar(); }
+    }
+
+    async function salvarPonto() {
+        const emp = document.getElementById("empresa").value;
+        const func = document.getElementById("funcionario").value;
+        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
+        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
+        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
+            const ins = tr.querySelectorAll("input");
+            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value }
+        });
+        await db.collection("pontos").doc(key).set({dados});
+        alert("Ponto Salvo com Sucesso!");
+    }
+
+    // --- DEMAIS FUNÇÕES AUXILIARES ---
 
     function gerar() {
-        const mes = +mesEl.value;
-        const ano = +anoEl.value;
-
+        const mes = +mesEl.value, ano = +anoEl.value;
+        const diasNoMes = new Date(ano, mes, 0).getDate();
+        const tb = document.getElementById("tb");
         tb.innerHTML = "";
-        const dias = new Date(ano, mes, 0).getDate(); // Quantidade de dias no mês
-
-        for(let i=1; i<=dias; i++) {
-            const d = new Date(ano, mes-1, i);
+        for(let i=1; i<=diasNoMes; i++) {
+            const data = new Date(ano, mes-1, i);
             const tr = document.createElement("tr");
-
-            if(new Date().toDateString() == d.toDateString()) {
-                tr.classList.add("hoje");
-            }
-
+            tr.setAttribute('data-week', getWeekNumber(data));
+            if(data.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
             tr.innerHTML = `
-                <td>${String(i).padStart(2,'0')}/${String(mes).padStart(2,'0')}</td>
-                <td>${diasSemana[d.getDay()]}</td>
-                <td>
-                    <select>
-                        <option>Normal</option>
-                        <option ${d.getDay() === 0 || d.getDay() === 6 ? 'selected' : ''}>Folga/FDS</option>
-                        <option>Feriado</option>
-                        <option>Atestado</option>
-                        <option>Falta</option>
-                    </select>
-                </td>
-                <td><input type="time"></td>
-                <td><input type="time"></td>
-                <td><input type="time"></td>
-                <td><input type="time"></td>
-                <td class="t">00:00</td>
-                <td class="s">00:00</td>
-                <td><input class="obs" type="text"></td>
+                <td>${String(i).padStart(2,'0')}</td><td>${diasSemana[data.getDay()]}</td>
+                <td><select onchange="autoPreencher(this)"><option>Normal</option><option ${data.getDay()==0 || data.getDay()==6?'selected':''}>Folga/FDS</option><option>Feriado</option><option>Atestado</option><option>Atestado Horas</option><option>Falta</option></select></td>
+                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
+                <td class="t">00:00</td><td class="s">00:00</td><td><input class="obs" type="text" oninput="calc()" placeholder="Ex: 4"></td>
             `;
             tb.appendChild(tr);
         }
-        calc(); // Recalcula ao gerar
+        calc();
     }
 
-    mesEl.onchange = gerar;
-    anoEl.onchange = gerar;
-    gerar();
-
-    // 🔥 SALVAR (LOCAL + FIREBASE)
-    async function salvar() {
-        const key = getKey(mesEl.value, anoEl.value);
-        let dados =[];
-
-        document.querySelectorAll("#tb tr").forEach(r => {
-            const inputs = r.querySelectorAll("input");
-            const select = r.querySelector("select");
-
-            dados.push({
-                tipo: select.value,
-                entrada: inputs[0].value,
-                saidaAlmoco: inputs[1].value,
-                volta: inputs[2].value,
-                saida: inputs[3].value,
-                obs: inputs[4].value
-            });
-        });
-
-        // backup local
-        localStorage.setItem(key, JSON.stringify(dados));
-
-        // firebase
-        try {
-            await db.collection("pontos").doc(key).set({dados});
-            alert("Salvo na nuvem com sucesso! 🚀");
-        } catch(e) {
-            console.error("Erro no Firebase:", e);
-            alert("Erro ao salvar na nuvem (Salvo apenas no computador local). Verifique as regras do Firestore.");
-        }
+    function autoPreencher(select) {
+        const tr = select.closest('tr');
+        const inputs = tr.querySelectorAll('input[type="time"]');
+        const tipo = select.value;
+        if(["Folga/FDS", "Feriado", "Atestado"].includes(tipo)) {
+            inputs[0].value = document.getElementById("bE1").value; inputs[1].value = document.getElementById("bS1").value;
+            inputs[2].value = document.getElementById("bE2").value; inputs[3].value = document.getElementById("bS2").value;
+        } else if (tipo === "Normal" || tipo === "Falta") { inputs.forEach(i => i.value = ""); }
+        calc();
     }
 
-    // 🔥 CARREGAR (FIREBASE + FALLBACK)
-    async function carregar() {
-        gerar();
-        const key = getKey(mesEl.value, anoEl.value);
-
-        try {
-            const doc = await db.collection("pontos").doc(key).get();
-            if(doc.exists) {
-                const dados = doc.data().dados;
-                preencherTabela(dados);
-                calc();
-                return;
-            }
-        } catch(e) {
-            console.error("Erro ao carregar da nuvem:", e);
-        }
-
-        // fallback local
-        const dados = JSON.parse(localStorage.getItem(key));
-        if(dados) {
-            preencherTabela(dados);
-            calc();
-        } else {
-            alert("Nenhum dado encontrado para este mês.");
-        }
+    function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
+    function format(minutos) {
+        const sign = minutos < 0 ? "-" : "";
+        const abs = Math.abs(Math.round(minutos));
+        return sign + String(Math.floor(abs/60)).padStart(2,'0') + ":" + String(abs%60).padStart(2,'0');
+    }
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7);
+    }
+    function filtrarColaboradores(nomeEmpresa) {
+        document.getElementById("empresa").value = nomeEmpresa;
+        const selFunc = document.getElementById("selFunc");
+        if(!nomeEmpresa) { selFunc.innerHTML = `<option value="">Aguardando Empresa...</option>`; return; }
+        const filtrados = JSON.parse(localStorage.getItem('funcionarios') || "[]").filter(f => f.empresaVinculo === nomeEmpresa);
+        selFunc.innerHTML = `<option value="">Selecione o Colaborador...</option>`;
+        filtrados.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(f => selFunc.innerHTML += `<option value="${f.nome}">${f.nome}</option>`);
+    }
+    function selecionarColaborador(nomeFunc) { 
+        document.getElementById("funcionario").value = nomeFunc; 
+        carregarSaldoAnterior(); 
+    }
+    function popularSelectEmpresasModal() {
+        const fEmp = document.getElementById("fEmpresaVinculo");
+        fEmp.innerHTML = `<option value="">Escolha uma Empresa...</option>`;
+        JSON.parse(localStorage.getItem('empresas') || "[]").forEach(e => fEmp.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
+    }
+    async function salvarCadastro(colecao, p) {
+        const nome = document.getElementById(p+'Nome').value.trim();
+        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
+        if(!nome || !doc) return alert("Preencha Nome e Documento!");
+        const dados = { nome, doc, empresaVinculo: p=='f'?document.getElementById('fEmpresaVinculo').value:null, cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value, num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value, tel: document.getElementById(p+'Tel').value };
+        await db.collection(colecao).doc(nome).set(dados);
+        let cache = JSON.parse(localStorage.getItem(colecao) || "[]").filter(x => x.nome !== nome);
+        cache.push(dados); localStorage.setItem(colecao, JSON.stringify(cache));
+        fecharModal(p=='e'?'mEmpresa':'mFunc'); atualizarSelectsPrincipais();
+    }
+    function atualizarSelectsPrincipais() {
+        const selEmp = document.getElementById("selEmp");
+        selEmp.innerHTML = `<option value="">Selecione a Empresa...</option>`;
+        JSON.parse(localStorage.getItem('empresas') || "[]").sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(e => selEmp.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
+    }
+    async function buscaCNPJ(cnpj) {
+        cnpj = cnpj.replace(/\D/g,''); if(cnpj.length !== 14) return;
+        try { const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`); const data = await resp.json();
+            document.getElementById('eNome').value = data.razao_social; document.getElementById('eCEP').value = data.cep;
+            document.getElementById('eEnd').value = data.logradouro; document.getElementById('eEstado').value = data.uf; document.getElementById('eNum').value = data.numero;
+        } catch(e) {}
+    }
+    async function buscaCEP(cep, p) {
+        cep = cep.replace(/\D/g,''); if(cep.length != 8) return;
+        const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await resp.json();
+        if(!data.erro) { document.getElementById(p+'End').value = data.logradouro; document.getElementById(p+'Estado').value = data.uf; }
     }
 
-    // 🔥 PREENCHER TABELA
-    function preencherTabela(dados) {
-        document.querySelectorAll("#tb tr").forEach((r, i) => {
-            if(!dados[i]) return;
-            const inputs = r.querySelectorAll("input");
-            r.querySelector("select").value = dados[i].tipo;
-            inputs[0].value = dados[i].entrada;
-            inputs[1].value = dados[i].saidaAlmoco;
-            inputs[2].value = dados[i].volta;
-            inputs[3].value = dados[i].saida;
-            inputs[4].value = dados[i].obs || "";
-        });
-    }
-
-    // Função auxiliar para converter "HH:MM" em minutos
-    function timeToMinutes(timeStr) {
-        if (!timeStr) return 0;
-        const partes = timeStr.split(':');
-        return parseInt(partes[0]) * 60 + parseInt(partes[1]);
-    }
-
-    // Função auxiliar para formatar horas decimais em "HH:MM"
-    function formatTime(decimalHours) {
-        const isNegative = decimalHours < 0;
-        const absoluteHours = Math.abs(decimalHours);
-        const hours = Math.floor(absoluteHours);
-        const minutes = Math.round((absoluteHours - hours) * 60);
-        const sinal = isNegative ? "-" : "";
-        return `${sinal}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    }
-
-    // 🔥 CALCULAR HORAS
-    function calc() {
-        let total = 0, cred = 0, deb = 0;
-        const cargaDiaria = parseFloat(cargaEl.value || 8);
-
-        document.querySelectorAll("#tb tr").forEach(r => {
-            const inputs = r.querySelectorAll("input");
-            const tipo = r.querySelector("select").value;
-
-            let horasTrabalhadas = 0;
-            let saldoDoDia = 0;
-
-            const entrada = inputs[0].value;
-            const saidaAlmoco = inputs[1].value;
-            const volta = inputs[2].value;
-            const saida = inputs[3].value;
-
-            // Se tem pelo menos entrada e saída, já calcula.
-            if(entrada) {
-                let minManha = 0;
-                let minTarde = 0;
-
-                if (entrada && saidaAlmoco) {
-                    minManha = timeToMinutes(saidaAlmoco) - timeToMinutes(entrada);
-                }
-                if (volta && saida) {
-                    minTarde = timeToMinutes(saida) - timeToMinutes(volta);
-                } else if (entrada && saida && !saidaAlmoco && !volta) {
-                    // Direto sem almoço
-                    minManha = timeToMinutes(saida) - timeToMinutes(entrada);
-                }
-
-                horasTrabalhadas = (minManha + minTarde) / 60;
-            }
-
-            // Regras de negócio
-            if(tipo === "Atestado" || tipo === "Folga/FDS" || tipo === "Feriado") {
-                saldoDoDia = horasTrabalhadas; // O que fizer é hora extra
-            } else if(tipo === "Falta") {
-                saldoDoDia = -cargaDiaria;
-            } else {
-                // Normal
-                if(horasTrabalhadas > 0) {
-                    saldoDoDia = horasTrabalhadas - cargaDiaria;
-                } else {
-                    saldoDoDia = 0; // Se não preencheu, ignora (ou mude para -cargaDiaria se preferir descontar dias não preenchidos)
-                }
-            }
-
-            total += horasTrabalhadas;
-            if(saldoDoDia > 0) cred += saldoDoDia;
-            if(saldoDoDia < 0) deb += Math.abs(saldoDoDia);
-
-            r.querySelector(".t").innerText = formatTime(horasTrabalhadas);
-            r.querySelector(".s").innerText = formatTime(saldoDoDia);
-            
-            // Cor do saldo na linha
-            r.querySelector(".s").style.color = saldoDoDia > 0 ? "green" : (saldoDoDia < 0 ? "red" : "black");
-        });
-
-        // Atualizar Cards
-        elH.innerText = formatTime(total);
-        elC.innerText = formatTime(cred);
-        elD.innerText = formatTime(deb);
-
-        let saldoMes = cred - deb;
-        elSM.innerText = formatTime(saldoMes);
-        elSM.style.color = saldoMes > 0 ? "green" : (saldoMes < 0 ? "red" : "black");
-
-        elSA.innerText = "00:00"; // Aqui você pode implementar a busca do mês passado depois
-        elAC.innerText = formatTime(saldoMes);
-    }
-
-    // Ouve qualquer alteração nos inputs e recalcula
-    document.addEventListener("input", calc);
-
-    function padrao() { gerar(); }
-    function limpar() { if(confirm("Deseja apagar os dados da tela?")) location.reload(); }
-
+    window.onload = () => { atualizarSelectsPrincipais(); gerar(); };
 </script>
 </body>
 </html>
