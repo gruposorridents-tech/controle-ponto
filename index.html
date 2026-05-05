@@ -3,43 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Ponto CLT - Automação e Importação</title>
+<title>Sistema de Ponto CLT - Pro v4</title>
 <style>
-    body{margin:0;font-family:'Segoe UI',sans-serif;background:#f1f5f9;color:#334155;}
-    .header{background:#0f172a;color:white;padding:15px;text-align:center;font-weight:bold;}
+    :root { --primary: #2563eb; --dark: #0f172a; --bg: #f1f5f9; --danger: #ef4444; --purple: #8b5cf6; --excel: #1d6f42; }
+    body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:#334155;}
+    
+    /* LOGIN */
+    #loginScreen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--dark); z-index: 1000; display: flex; justify-content: center; align-items: center; color: white; }
+    .login-box { background: white; padding: 30px; border-radius: 12px; color: #334155; width: 300px; text-align: center; }
+    .login-box input, .login-box select { width: 100%; margin-bottom: 15px; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+
+    /* LAYOUT */
+    .header{background:var(--dark);color:white;padding:15px;text-align:center;font-weight:bold; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;}
     .container{padding:20px;}
-    .top-controls{display:flex;gap:10px;flex-wrap:wrap;background:white;padding:20px;border-radius:10px;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);margin-bottom:20px;}
-    .base-schedule{display:flex; gap:5px; align-items:center; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-top:10px; width:100%;}
-    input,select{padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px; min-width: 150px;}
-    button{padding:10px 15px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:0.2s; display:inline-flex; align-items:center; gap:5px;}
-    .btn-primary{background:#2563eb;color:white;}
+    .top-controls{display:flex; gap:15px; flex-wrap:wrap; background:white; padding:20px; border-radius:10px; box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom:20px;}
+    
+    .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+    .field-group label { font-size: 10px; font-weight: bold; color: #64748b; letter-spacing: 0.5px; }
+
+    .base-schedule{display:flex; gap:10px; align-items:flex-end; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; flex-wrap: wrap;}
+    
+    input,select{padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; width: 100%; text-transform: uppercase; box-sizing: border-box;}
+    input[type="password"] { text-transform: none; }
+    input[type="time"] { min-width: 85px; }
+    input[readonly] { background-color: #f8fafc; cursor: not-allowed; border-color: #e2e8f0; color: #475569; }
+    
+    button{padding:10px 15px; border:none; border-radius:6px; cursor:pointer; font-weight:600; transition:0.2s; display:inline-flex; align-items:center; gap:5px; white-space: nowrap;}
+    .btn-primary{background:var(--primary);color:white;}
     .btn-success{background:#16a34a;color:white;}
+    .btn-excel{background:var(--excel);color:white;}
     .btn-dark{background:#334155;color:white;}
-    .btn-import{background:#8b5cf6;color:white;}
+    .btn-danger{background:var(--danger); color: white;}
+    .btn-import{background:var(--purple); color: white;}
+    .btn-logout{background:#64748b; color: white; padding: 5px 10px; font-size: 11px;}
     
     .cards{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;}
-    .card{flex:1;background:white;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.05);min-width:120px;}
+    .card{flex:1;background:white;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.05);min-width:110px;}
     .card b{display:block;font-size:1.4rem;margin-top:5px;}
     .credito{color:#16a34a;} .debito{color:#dc2626;}
 
     table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);}
-    th{background:#1e293b;color:white;padding:12px;font-size:13px;}
-    td{padding:8px;text-align:center;border-bottom:1px solid #f1f5f9;}
+    th{background:#1e293b;color:white;padding:12px;font-size:12px;}
+    td{padding:8px;text-align:center;border-bottom:1px solid #f1f5f9; font-size: 13px;}
     .hoje{background:#eff6ff !important;outline:2px solid #3b82f6;}
     
-    .modal{display:none;position:fixed;z-index:100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;}
+    .modal{display:none;position:fixed;z-index:1100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;}
     .modal-content{background:white;padding:25px;border-radius:12px;width:90%;max-width:500px;}
     .grid-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     .full-w{grid-column: span 2;}
+    .master-only { display: none; }
 </style>
 
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
     const firebaseConfig = {
-        apiKey: "AIzaSyAEq2fa6m9px15IGR6vUPUQ_UnFhkwlPc",
-        authDomain: "controle-ponto-1fb12.firebaseapp.com",
-        projectId: "controle-ponto-1fb12"
+      apiKey: "AIzaSyAEQ2fa6m9px15IGR6vUuPD_UnFHkw1Pc",
+      authDomain: "controle-ponto-1f102.firebaseapp.com",
+      projectId: "controle-ponto-1f102",
+      storageBucket: "controle-ponto-1f102.firebasestorage.app",
+      messagingSenderId: "405114720617",
+      appId: "1:405114720617:web:a1dd178eb19502cda4adf8"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -47,60 +72,84 @@
 </head>
 <body>
 
-<div class="header">SISTEMA DE CONTROLE DE PONTO CLT</div>
+<div id="loginScreen">
+    <div class="login-box">
+        <h2 style="margin-bottom: 20px;">PONTO CLT - LOGIN</h2>
+        <select id="loginUser"><option value="ADMIN">USUÁRIO MASTER (ADMIN)</option></select>
+        <input type="password" id="loginPass" placeholder="SENHA DE ACESSO">
+        <button class="btn-primary" style="width:100%" onclick="tentarLogin()">ENTRAR</button>
+    </div>
+</div>
+
+<div class="header">
+    <span>CONTROLE DE PONTO</span>
+    <div id="userInfo" style="font-size: 11px; opacity: 0.8;"></div>
+    <button class="btn-logout" onclick="logout()">SAIR / LOGOUT</button>
+</div>
 
 <div class="container">
     <div class="top-controls">
-        <button class="btn-dark" onclick="abrirModal('mEmpresa')">🏢 Nova Empresa</button>
-        <button class="btn-dark" onclick="abrirModal('mFunc')">👤 Novo Colaborador</button>
+        <div style="display:flex; gap:10px; width:100%; flex-wrap: wrap;">
+            <button class="btn-dark master-only" onclick="abrirModal('mEmpresa')">🏢 NOVA EMPRESA</button>
+            <button class="btn-primary master-only" onclick="abrirModalSenha()">🔑 ALTERAR SENHA</button>
+            <button class="btn-danger master-only" onclick="deletarEmpresa()">🗑️ DELETAR EMPRESA</button>
+            <button class="btn-dark" onclick="abrirModal('mFunc')">👤 NOVO COLABORADOR</button>
+            <button class="btn-danger master-only" onclick="deletarColaborador()">🗑️ DELETAR COLABORADOR</button>
+        </div>
         
-        <div style="display:flex; gap:10px; width:100%; flex-wrap:wrap">
-            <select id="selEmp" onchange="filtrarColaboradores(this.value)">
-                <option value="">Selecione a Empresa...</option>
-            </select>
-            <select id="selFunc" onchange="selecionarColaborador(this.value)">
-                <option value="">Aguardando Empresa...</option>
-            </select>
+        <div class="field-group master-only">
+            <label>SELECIONAR EMPRESA</label>
+            <select id="selEmp" onchange="filtrarColaboradores(this.value)"></select>
+        </div>
+        <div class="field-group">
+            <label>SELECIONAR COLABORADOR</label>
+            <select id="selFunc" onchange="selecionarColaborador(this.value)"></select>
         </div>
 
         <div class="base-schedule">
-            <span style="font-size:11px; font-weight:bold; color:#64748b">HORÁRIO BASE:</span>
-            <input type="time" id="bE1" value="08:00">
-            <input type="time" id="bS1" value="12:00">
-            <input type="time" id="bE2" value="13:00">
-            <input type="time" id="bS2" value="17:00">
-            <input id="carga" type="number" value="8" style="width:50px" oninput="calc()">
-            <div style="margin-left: auto;">
-                <input type="file" id="fileInput" style="display:none" accept=".csv, .txt" onchange="importarArquivo(event)">
-                <button class="btn-import" onclick="document.getElementById('fileInput').click()">📁 Importar CSV</button>
+            <div class="field-group" style="min-width: 80px; flex: 0;"><label>ENTRADA</label><input type="time" id="bE1" value="08:00" oninput="calcularCargaAutomatica()"></div>
+            <div class="field-group" style="min-width: 80px; flex: 0;"><label>ALMOÇO</label><input type="time" id="bS1" value="12:00" oninput="calcularCargaAutomatica()"></div>
+            <div class="field-group" style="min-width: 80px; flex: 0;"><label>RETORNO</label><input type="time" id="bE2" value="13:00" oninput="calcularCargaAutomatica()"></div>
+            <div class="field-group" style="min-width: 80px; flex: 0;"><label>SAÍDA</label><input type="time" id="bS2" value="17:00" oninput="calcularCargaAutomatica()"></div>
+            <div class="field-group" style="min-width: 80px; flex: 0;">
+                <label>HORAS/DIA</label>
+                <input id="carga" type="text" value="8.00" readonly style="text-align: center; font-weight: bold; color: var(--primary);">
             </div>
         </div>
 
-        <hr style="width:100%;border:0;border-top:1px solid #e2e8f0">
+        <hr style="width:100%;border:0;border-top:1px solid #e2e8f0; margin: 5px 0;">
 
-        <input id="empresa" placeholder="Empresa" readonly style="background:#f1f5f9">
-        <input id="funcionario" placeholder="Funcionário" readonly style="background:#f1f5f9">
-        <select id="mes" onchange="gerar(); carregarSaldoAnterior();"></select>
-        <select id="ano" onchange="gerar(); carregarSaldoAnterior();"></select>
+        <div style="display: flex; gap: 15px; width: 100%; flex-wrap: wrap;">
+            <div class="field-group"><label>EMPRESA ATIVA</label><input id="empresa" readonly></div>
+            <div class="field-group"><label>NOME COLABORADOR</label><input id="funcionario" readonly></div>
+            <div class="field-group" style="flex: 0; min-width: 100px;"><label>MÊS</label><select id="mes" onchange="gerar()"></select></div>
+            <div class="field-group" style="flex: 0; min-width: 100px;"><label>ANO</label><select id="ano" onchange="gerar()"></select></div>
+        </div>
         
-        <button class="btn-primary" onclick="carregar()">🔄 Carregar Ponto</button>
-        <button class="btn-success" onclick="salvarPonto()">💾 Salvar Ponto</button>
+        <div style="display:flex; align-items:flex-end; gap:8px; margin-left: auto; width: 100%; justify-content: flex-end; flex-wrap: wrap;">
+            <button class="btn-import" onclick="document.getElementById('fileInput').click()">📁 IMPORTAR CSV</button>
+            <button class="btn-excel" onclick="exportarExcel()">📊 EXCEL</button>
+            <button class="btn-primary" onclick="carregar()">🔄 CARREGAR PONTO</button>
+            <button class="btn-success" onclick="salvarPonto()">💾 SALVAR PONTO</button>
+            <input type="file" id="fileInput" style="display:none" accept=".csv, .txt" onchange="importarArquivo(event)">
+        </div>
     </div>
 
+    <!-- CARDS -->
     <div class="cards">
-        <div class="card">Trabalhado<br><b id="h">00:00</b></div>
-        <div class="card">Crédito<br><b id="c" class="credito">00:00</b></div>
-        <div class="card">Débito<br><b id="d" class="debito">00:00</b></div>
-        <div class="card">DSR Perdido<br><b id="dsr" style="color:#f59e0b">00:00</b></div>
-        <div class="card">Saldo Anterior<br><b id="sa">00:00</b></div>
-        <div class="card">Saldo Mês<br><b id="sm">00:00</b></div>
-        <div class="card" style="background:#e2e8f0">Saldo Acumulado<br><b id="ac">00:00</b></div>
+        <div class="card">TRABALHADO<br><b id="h">00:00</b></div>
+        <div class="card">CRÉDITO<br><b id="c" class="credito">00:00</b></div>
+        <div class="card">DÉBITO<br><b id="d" class="debito">00:00</b></div>
+        <div class="card">DSR PERDIDO<br><b id="dsr" style="color:#f59e0b">00:00</b></div>
+        <div class="card">SALDO ANTERIOR<br><b id="sa">00:00</b></div>
+        <div class="card">SALDO MÊS<br><b id="sm">00:00</b></div>
+        <div class="card" style="background:#e2e8f0">SALDO ACUMULADO<br><b id="ac">00:00</b></div>
     </div>
 
-    <table>
+    <table id="tabelaPonto">
         <thead>
             <tr>
-                <th>Dia</th><th>Sem</th><th>Tipo de Jornada</th><th>Entrada</th><th>Almoço</th><th>Retorno</th><th>Saída</th><th>Total</th><th>Saldo</th><th>Obs/H. Abonadas</th>
+                <th>DIA</th><th>SEM</th><th>TIPO JORNADA</th><th>ENTRADA</th><th>ALMOÇO</th><th>RETORNO</th><th>SAÍDA</th><th>TOTAL</th><th>SALDO</th><th>OBS</th>
             </tr>
         </thead>
         <tbody id="tb"></tbody>
@@ -109,46 +158,189 @@
 
 <!-- MODAL EMPRESA -->
 <div id="mEmpresa" class="modal"><div class="modal-content">
-    <h3>🏢 Cadastrar Empresa</h3>
-    <div class="grid-form" id="formEmpresa">
-        <input id="eCNPJ" class="full-w" style="border: 2px solid #2563eb" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
-        <input id="eNome" class="full-w" placeholder="Razão Social">
+    <h3>🏢 CADASTRAR NOVA EMPRESA</h3>
+    <div class="grid-form">
+        <input id="eCNPJ" class="full-w" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
+        <input id="eNome" class="full-w" placeholder="RAZÃO SOCIAL">
         <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
-        <input id="eEstado" placeholder="UF"><input id="eEnd" class="full-w" placeholder="Logradouro">
-        <input id="eNum" placeholder="Número"><input id="eTel" placeholder="Telefone">
+        <input id="eEstado" placeholder="UF">
+        <input id="eEnd" class="full-w" placeholder="LOGRADOURO">
+        <input id="eNum" placeholder="NÚMERO">
+        <input id="eTel" placeholder="TELEFONE">
+        <input id="eSenha" class="full-w" type="password" placeholder="DEFINIR SENHA DE ACESSO">
     </div><br>
-    <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">Salvar e Limpar</button>
-    <button onclick="fecharModal('mEmpresa')">Cancelar</button>
+    <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">SALVAR</button>
+    <button onclick="fecharModal('mEmpresa')">CANCELAR</button>
+</div></div>
+
+<!-- MODAL ALTERAR SENHA -->
+<div id="mSenha" class="modal"><div class="modal-content">
+    <h3>🔑 ALTERAR SENHA DA EMPRESA</h3>
+    <p id="labelEmpresaSenha" style="font-weight: bold; color: var(--primary);"></p>
+    <div class="grid-form">
+        <input id="novaSenhaInput" class="full-w" type="password" placeholder="DIGITE A NOVA SENHA">
+    </div><br>
+    <button class="btn-success" onclick="confirmarAlterarSenha()">ATUALIZAR SENHA</button>
+    <button onclick="fecharModal('mSenha')">CANCELAR</button>
 </div></div>
 
 <!-- MODAL COLABORADOR -->
 <div id="mFunc" class="modal"><div class="modal-content">
-    <h3>👤 Cadastrar Colaborador</h3>
-    <div class="grid-form" id="formFunc">
-        <div class="full-w"><select id="fEmpresaVinculo" style="width:100%"></select></div>
-        <input id="fNome" class="full-w" placeholder="Nome Completo"><input id="fCPF" placeholder="CPF">
+    <h3>👤 CADASTRAR COLABORADOR</h3>
+    <div class="grid-form">
+        <div class="full-w"><label style="font-size: 10px;">VINCULAR EMPRESA:</label><br><select id="fEmpresaVinculo"></select></div>
+        <input id="fNome" class="full-w" placeholder="NOME COMPLETO">
+        <input id="fCPF" placeholder="CPF" oninput="mascaraCPF(this)" maxlength="14">
         <input id="fCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'f')">
-        <input id="fEstado" placeholder="UF"><input id="fEnd" class="full-w" placeholder="Endereço">
-        <input id="fNum" placeholder="Número"><input id="fTel" placeholder="Telefone">
+        <input id="fEstado" placeholder="UF"><input id="fEnd" class="full-w" placeholder="ENDEREÇO">
+        <input id="fNum" placeholder="NÚMERO"><input id="fTel" placeholder="TELEFONE">
     </div><br>
-    <button class="btn-success" onclick="salvarCadastro('funcionarios', 'f')">Salvar e Limpar</button>
-    <button onclick="fecharModal('mFunc')">Cancelar</button>
+    <button class="btn-success" onclick="salvarCadastro('funcionarios', 'f')">SALVAR</button>
+    <button onclick="fecharModal('mFunc')">CANCELAR</button>
 </div></div>
 
 <script>
-    const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-    let saldoAnteriorGlobal = 0;
+    const MASTER_PASS = "admin123";
+    let USUARIO_LOGADO = null;
 
-    // Inicialização
-    const mesEl = document.getElementById("mes"), anoEl = document.getElementById("ano");
-    const dNow = new Date();
-    for(let i=1; i<=12; i++) mesEl.innerHTML += `<option value="${i}" ${i==dNow.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
-    for(let i=2023; i<=2030; i++) anoEl.innerHTML += `<option value="${i}" ${i==dNow.getFullYear()?'selected':''}>${i}</option>`;
+    // --- DELETAR COLABORADOR (MASTER ONLY) ---
+    async function deletarColaborador() {
+        const nomeColaborador = document.getElementById("selFunc").value;
+        const nomeEmpresa = document.getElementById("selEmp").value;
 
-    function abrirModal(id) { if(id === 'mFunc') popularSelectEmpresasModal(); document.getElementById(id).style.display='flex'; }
-    function fecharModal(id) { document.getElementById(id).style.display='none'; }
+        if(!nomeColaborador) return alert("Selecione um colaborador na lista primeiro!");
 
-    // --- IMPORTAÇÃO DE ARQUIVO ---
+        if(confirm(`⚠️ CUIDADO: Deseja realmente excluir permanentemente o colaborador "${nomeColaborador.toUpperCase()}"?`)) {
+            try {
+                await db.collection("funcionarios").doc(nomeColaborador).delete();
+                alert("✅ Colaborador removido com sucesso!");
+                
+                // Limpar campos e recarregar
+                document.getElementById("funcionario").value = "";
+                if(nomeEmpresa) filtrarColaboradores(nomeEmpresa); 
+            } catch(e) { alert("Erro ao deletar colaborador."); }
+        }
+    }
+
+    // --- SENHA MASTER ---
+    function abrirModalSenha() {
+        const emp = document.getElementById("selEmp").value;
+        if(!emp) return alert("Selecione uma empresa primeiro!");
+        document.getElementById("labelEmpresaSenha").innerText = "EMPRESA: " + emp.toUpperCase();
+        abrirModal('mSenha');
+    }
+
+    async function confirmarAlterarSenha() {
+        const emp = document.getElementById("selEmp").value;
+        const nova = document.getElementById("novaSenhaInput").value;
+        if(!nova) return alert("Digite a nova senha!");
+        try {
+            await db.collection("empresas").doc(emp).update({ senha: nova });
+            alert("✅ Senha alterada!");
+            fecharModal('mSenha');
+            document.getElementById("novaSenhaInput").value = "";
+        } catch(e) { alert("Erro."); }
+    }
+
+    // --- CARGA HORÁRIA ---
+    function calcularCargaAutomatica() {
+        const e1 = timeToMin(document.getElementById("bE1").value);
+        const s1 = timeToMin(document.getElementById("bS1").value);
+        const e2 = timeToMin(document.getElementById("bE2").value);
+        const s2 = timeToMin(document.getElementById("bS2").value);
+        let totalMin = 0;
+        if (e1 && s1) totalMin += (s1 - e1);
+        if (e2 && s2) totalMin += (s2 - e2);
+        document.getElementById("carga").value = (totalMin / 60).toFixed(2);
+        calc();
+    }
+
+    // --- LOGIN ---
+    async function tentarLogin() {
+        const user = document.getElementById("loginUser").value;
+        const pass = document.getElementById("loginPass").value;
+        if(user === "ADMIN") {
+            if(pass === MASTER_PASS) configurarAcesso("MASTER", "ADMIN");
+            else alert("Senha Incorreta!");
+        } else {
+            const doc = await db.collection("empresas").doc(user).get();
+            if(doc.exists && doc.data().senha === pass) configurarAcesso("EMPRESA", user);
+            else alert("Senha da Empresa Incorreta!");
+        }
+    }
+
+    function configurarAcesso(tipo, nome) {
+        USUARIO_LOGADO = { tipo, nome };
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("userInfo").innerText = `SESSÃO: ${nome.toUpperCase()}`;
+        if(tipo === "MASTER") document.querySelectorAll(".master-only").forEach(el => el.style.display = "inline-flex");
+        atualizarSelectsPrincipais();
+        gerar();
+        calcularCargaAutomatica();
+    }
+
+    function logout() { location.reload(); }
+
+    // --- CADASTROS ---
+    async function salvarCadastro(colecao, p) {
+        const nome = document.getElementById(p+'Nome').value.trim().toUpperCase();
+        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
+        if(!nome || !doc) return alert("Preencha Nome e Doc!");
+        
+        const dados = { 
+            nome, doc, 
+            empresaVinculo: p == 'f' ? (USUARIO_LOGADO.tipo === "EMPRESA" ? USUARIO_LOGADO.nome : document.getElementById('fEmpresaVinculo').value) : null,
+            cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value.toUpperCase(),
+            num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value.toUpperCase(),
+            tel: document.getElementById(p+'Tel').value 
+        };
+        if(p == 'e') dados.senha = document.getElementById('eSenha').value;
+
+        try {
+            await db.collection(colecao).doc(nome).set(dados);
+            alert("✅ Salvo!");
+            document.querySelectorAll(`#m${p === 'e' ? 'Empresa' : 'Func'} input`).forEach(i => i.value = "");
+            fecharModal(p=='e'?'mEmpresa':'mFunc');
+            atualizarSelectsPrincipais();
+            carregarEmpresasNoLogin();
+        } catch(e) { alert("Erro ao salvar."); }
+    }
+
+    // --- TABELA E CALCULOS ---
+    function gerar() {
+        const mes = +document.getElementById("mes").value, ano = +document.getElementById("ano").value;
+        const dias = new Date(ano, mes, 0).getDate();
+        const tb = document.getElementById("tb"); tb.innerHTML = "";
+        for(let i=1; i<=dias; i++) {
+            const d = new Date(ano, mes-1, i);
+            const tr = document.createElement("tr");
+            tr.setAttribute('data-week', Math.ceil(i/7));
+            if(d.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
+            tr.innerHTML = `<td>${String(i).padStart(2,'0')}</td><td>${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"][d.getDay()]}</td>
+                <td><select onchange="autoPreencher(this)"><option>NORMAL</option><option ${d.getDay()==0||d.getDay()==6?'selected':''}>FOLGA/FDS</option><option>FERIADO</option><option>ATESTADO</option><option>ATESTADO HORAS</option><option>FALTA</option></select></td>
+                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
+                <td class="t">00:00</td><td class="s">00:00</td><td><input style="text-transform:none" type="text" oninput="calc()"></td>`;
+            tb.appendChild(tr);
+        }
+        calc();
+    }
+
+    // --- IMPORTAÇÃO E EXCEL ---
+    function exportarExcel() {
+        const emp = document.getElementById("empresa").value;
+        const func = document.getElementById("funcionario").value;
+        if(!func) return alert("Selecione um colaborador!");
+        let csv = `RELATORIO DE PONTO;${func};EMPRESA;${emp}\n\nDIA;SEMANA;TIPO;ENTRADA;ALMOCO;RETORNO;SAIDA;TOTAL;SALDO;OBS\n`;
+        document.querySelectorAll("#tb tr").forEach(tr => {
+            const tds = tr.querySelectorAll("td");
+            const inputs = tr.querySelectorAll("input");
+            csv += `${tds[0].innerText};${tds[1].innerText};${tr.querySelector("select").value};${inputs[0].value};${inputs[1].value};${inputs[2].value};${inputs[3].value};${tds[7].innerText};${tds[8].innerText};${inputs[4].value}\n`;
+        });
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+        link.download = `PONTO_${func}.csv`; link.click();
+    }
+
     function importarArquivo(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -156,182 +348,102 @@
         reader.onload = function(e) {
             const lines = e.target.result.split('\n');
             lines.forEach(line => {
-                const parts = line.split(/[;,]/); // Aceita vírgula ou ponto e vírgula
+                const parts = line.split(/[;,]/);
                 if (parts.length >= 2) {
-                    const dia = parseInt(parts[0]); // Primeira coluna é o dia
+                    const dia = parseInt(parts[0]);
                     const row = document.querySelector(`#tb tr:nth-child(${dia})`);
                     if (row) {
                         const inputs = row.querySelectorAll('input[type="time"]');
-                        if (parts[1]) inputs[0].value = parts[1].trim(); // Entrada
-                        if (parts[2]) inputs[1].value = parts[2].trim(); // Almoço
-                        if (parts[3]) inputs[2].value = parts[3].trim(); // Retorno
-                        if (parts[4]) inputs[3].value = parts[4].trim(); // Saída
+                        if (parts[1]) inputs[0].value = parts[1].trim();
+                        if (parts[2]) inputs[1].value = parts[2].trim();
+                        if (parts[3]) inputs[2].value = parts[3].trim();
+                        if (parts[4]) inputs[3].value = parts[4].trim();
                     }
                 }
             });
             calc();
-            alert("Ponto importado com sucesso!");
+            alert("✅ Dados importados!");
         };
         reader.readAsText(file);
     }
 
-    // --- SALVAR CADASTRO E LIMPAR ---
-    async function salvarCadastro(colecao, p) {
-        const modal = document.getElementById(p == 'e' ? 'mEmpresa' : 'mFunc');
-        const nome = document.getElementById(p+'Nome').value.trim();
-        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
-        if(!nome || !doc) return alert("Preencha Nome e Documento!");
-
-        const dados = { 
-            nome, doc, 
-            empresaVinculo: p=='f'?document.getElementById('fEmpresaVinculo').value:null, 
-            cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value, 
-            num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value, 
-            tel: document.getElementById(p+'Tel').value 
-        };
-
-        try {
-            await db.collection(colecao).doc(nome).set(dados);
-            let cache = JSON.parse(localStorage.getItem(colecao) || "[]").filter(x => x.nome !== nome);
-            cache.push(dados);
-            localStorage.setItem(colecao, JSON.stringify(cache));
-            
-            alert("Salvo com sucesso!");
-            
-            // LIMPAR CAMPOS
-            modal.querySelectorAll('input').forEach(input => input.value = "");
-            fecharModal(p == 'e' ? 'mEmpresa' : 'mFunc');
-            atualizarSelectsPrincipais();
-        } catch(e) { alert("Erro ao salvar."); }
-    }
-
-    // --- LÓGICA DE PONTO (MANTIDA) ---
-    function calc() {
-        let totalH = 0, credito = 0, debitoDiario = 0;
-        const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
-        const semanasComFalta = new Set();
-        document.querySelectorAll("#tb tr").forEach(tr => {
-            const ins = tr.querySelectorAll("input");
-            const tipo = tr.querySelector("select").value;
-            const weekNum = tr.getAttribute('data-week');
-            let worked = 0;
-            const m1 = timeToMin(ins[0].value), m2 = timeToMin(ins[1].value), m3 = timeToMin(ins[2].value), m4 = timeToMin(ins[3].value);
-            if(m1 && m4) worked = (m2 && m3) ? (m2-m1)+(m4-m3) : (m4-m1);
-            let saldo = 0, totalExibido = worked;
-            if(tipo === "Atestado") { totalExibido = cargaMin; saldo = 0; }
-            else if(tipo === "Atestado Horas") { saldo = (worked + parseFloat(ins[4].value || 0) * 60) - cargaMin; totalExibido = worked + parseFloat(ins[4].value || 0) * 60; }
-            else if(tipo === "Falta") { totalExibido = 0; saldo = -cargaMin; semanasComFalta.add(weekNum); }
-            else if(["Folga/FDS", "Feriado"].includes(tipo)) { saldo = worked; }
-            else if(worked > 0) saldo = worked - cargaMin;
-            totalH += (tipo === "Normal" ? worked : 0);
-            saldo > 0 ? credito += saldo : debitoDiario += Math.abs(saldo);
-            tr.querySelector(".t").innerText = format(totalExibido);
-            tr.querySelector(".s").innerText = format(saldo);
-            tr.querySelector(".s").style.color = saldo > 0 ? "green" : (saldo < 0 ? "red" : "black");
-        });
-        const dsr = semanasComFalta.size * cargaMin;
-        const saldoMes = credito - debitoDiario - dsr;
-        document.getElementById("h").innerText = format(totalH);
-        document.getElementById("c").innerText = format(credito);
-        document.getElementById("d").innerText = format(debitoDiario);
-        document.getElementById("dsr").innerText = format(dsr);
-        document.getElementById("sm").innerText = format(saldoMes);
-        document.getElementById("sa").innerText = format(saldoAnteriorGlobal);
-        const acum = saldoMes + saldoAnteriorGlobal;
-        document.getElementById("ac").innerText = format(acum);
-        document.getElementById("ac").style.color = acum >= 0 ? "green" : "red";
-    }
-
     // --- AUXILIARES ---
     function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
-    function format(minutos) {
-        const sign = minutos < 0 ? "-" : "";
-        const abs = Math.abs(Math.round(minutos));
-        return sign + String(Math.floor(abs/60)).padStart(2,'0') + ":" + String(abs%60).padStart(2,'0');
-    }
-    function getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-        return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(),0,1))) / 86400000) + 1)/7);
-    }
-    function gerar() {
-        const mes = +mesEl.value, ano = +anoEl.value;
-        const diasNoMes = new Date(ano, mes, 0).getDate();
-        const tb = document.getElementById("tb");
-        tb.innerHTML = "";
-        for(let i=1; i<=diasNoMes; i++) {
-            const data = new Date(ano, mes-1, i);
-            const tr = document.createElement("tr");
-            tr.setAttribute('data-week', getWeekNumber(data));
-            if(data.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
-            tr.innerHTML = `
-                <td>${String(i).padStart(2,'0')}</td><td>${diasSemana[data.getDay()]}</td>
-                <td><select onchange="autoPreencher(this)"><option>Normal</option><option ${data.getDay()==0 || data.getDay()==6?'selected':''}>Folga/FDS</option><option>Feriado</option><option>Atestado</option><option>Atestado Horas</option><option>Falta</option></select></td>
-                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
-                <td class="t">00:00</td><td class="s">00:00</td><td><input class="obs" type="text" oninput="calc()" placeholder="Ex: 4"></td>
-            `;
-            tb.appendChild(tr);
-        }
-        calc();
-    }
-    function autoPreencher(select) {
-        const tr = select.closest('tr');
-        const inputs = tr.querySelectorAll('input[type="time"]');
-        const tipo = select.value;
-        if(["Folga/FDS", "Feriado", "Atestado"].includes(tipo)) {
-            inputs[0].value = document.getElementById("bE1").value; inputs[1].value = document.getElementById("bS1").value;
-            inputs[2].value = document.getElementById("bE2").value; inputs[3].value = document.getElementById("bS2").value;
-        } else if (tipo === "Normal" || tipo === "Falta") { inputs.forEach(i => i.value = ""); }
-        calc();
-    }
+    function format(min) { const s = min<0?"-":""; const a = Math.abs(Math.round(min)); return s+String(Math.floor(a/60)).padStart(2,'0')+":"+String(a%60).padStart(2,'0'); }
 
-    async function carregarSaldoAnterior() {
-        const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
-        if(!emp || !func) return;
-        let m = parseInt(mesEl.value) - 1, a = parseInt(anoEl.value);
-        if(m === 0) { m = 12; a--; }
-        const key = `ponto_${emp}_${func}_${a}_${m}`;
-        const doc = await db.collection("pontos").doc(key).get();
-        if(doc.exists) {
-            saldoAnteriorGlobal = calcularSaldoBruto(doc.data().dados);
-        } else { saldoAnteriorGlobal = 0; }
-        calc();
-    }
-
-    function calcularSaldoBruto(dados) {
-        const cargaMin = parseFloat(document.getElementById("carga").value || 8) * 60;
-        let cred = 0, deb = 0; const faltas = new Set();
-        dados.forEach((d, i) => {
-            let worked = (timeToMin(d.s2) - timeToMin(d.e2)) + (timeToMin(d.s1) - timeToMin(d.e1));
-            if(!d.s1) worked = timeToMin(d.s2) - timeToMin(d.e1);
-            let s = 0;
-            if(d.tipo === "Atestado") s = 0;
-            else if(d.tipo === "Atestado Horas") s = (worked + parseFloat(d.obs || 0)*60) - cargaMin;
-            else if(d.tipo === "Falta") { s = -cargaMin; faltas.add(Math.floor(i/7)); }
-            else if(["Folga/FDS", "Feriado"].includes(d.tipo)) s = worked;
-            else if(worked > 0) s = worked - cargaMin;
-            s > 0 ? cred += s : deb += Math.abs(s);
+    function calc() {
+        let totalH=0, cred=0, deb=0; const carga = parseFloat(document.getElementById("carga").value||8)*60; const faltas = new Set();
+        document.querySelectorAll("#tb tr").forEach(tr => {
+            const ins = tr.querySelectorAll("input"), tipo = tr.querySelector("select").value;
+            let w = 0; const m1=timeToMin(ins[0].value), m4=timeToMin(ins[3].value);
+            if(m1&&m4) w = (timeToMin(ins[1].value)&&timeToMin(ins[2].value)) ? (timeToMin(ins[1].value)-m1)+(m4-timeToMin(ins[2].value)) : (m4-m1);
+            let s=0, te=w;
+            if(tipo==="ATESTADO") {te=carga; s=0;}
+            else if(tipo==="ATESTADO HORAS") { const ab = parseFloat(ins[4].value||0)*60; te=w+ab; s=te-carga; }
+            else if(tipo==="FALTA") {te=0; s=-carga; faltas.add(tr.getAttribute('data-week'));}
+            else if(["FOLGA/FDS","FERIADO"].includes(tipo)) s=w;
+            else if(w>0) s=w-carga;
+            totalH += (tipo==="NORMAL"?w:0); s>0?cred+=s:deb+=Math.abs(s);
+            tr.querySelector(".t").innerText=format(te); tr.querySelector(".s").innerText=format(s);
+            tr.querySelector(".s").style.color = s>0?"green":(s<0?"red":"black");
         });
-        return cred - deb - (faltas.size * cargaMin);
+        const dsr = faltas.size * carga; const sm = cred-deb-dsr;
+        document.getElementById("h").innerText=format(totalH); document.getElementById("c").innerText=format(cred); document.getElementById("d").innerText=format(deb);
+        document.getElementById("dsr").innerText=format(dsr); document.getElementById("sm").innerText=format(sm);
+        document.getElementById("ac").innerText=format(sm);
+    }
+
+    function autoPreencher(s) {
+        const tr = s.closest('tr'); const ins = tr.querySelectorAll('input[type="time"]');
+        if(["FOLGA/FDS","FERIADO","ATESTADO"].includes(s.value)) {
+            ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
+            ins[2].value = document.getElementById("bE2").value; ins[3].value = document.getElementById("bS2").value;
+        } else if (s.value === "NORMAL" || s.value === "FALTA") ins.forEach(i => i.value = "");
+        calc();
+    }
+
+    async function carregarEmpresasNoLogin() {
+        const snap = await db.collection("empresas").get();
+        const loginSel = document.getElementById("loginUser");
+        loginSel.innerHTML = `<option value="ADMIN">USUÁRIO MASTER (ADMIN)</option>`;
+        snap.forEach(doc => { loginSel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome.toUpperCase()}</option>`; });
+    }
+
+    async function atualizarSelectsPrincipais() {
+        const selEmp = document.getElementById("selEmp");
+        selEmp.innerHTML = `<option value="">SELECIONE...</option>`;
+        const snap = await db.collection("empresas").get();
+        snap.forEach(doc => {
+            const emp = doc.data().nome;
+            if(USUARIO_LOGADO.tipo === "EMPRESA") { if(emp === USUARIO_LOGADO.nome) { selEmp.innerHTML = `<option value="${emp}">${emp}</option>`; selEmp.value = emp; selEmp.disabled = true; filtrarColaboradores(emp); } }
+            else { selEmp.innerHTML += `<option value="${emp}">${emp}</option>`; }
+        });
+    }
+
+    async function filtrarColaboradores(n) {
+        document.getElementById("empresa").value = n;
+        const sel = document.getElementById("selFunc"); sel.innerHTML = `<option value="">CARREGANDO...</option>`;
+        const snap = await db.collection("funcionarios").where("empresaVinculo", "==", n).get();
+        sel.innerHTML = `<option value="">SELECIONE...</option>`;
+        snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; });
     }
 
     async function salvarPonto() {
         const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
-        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
-        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
+        if(!emp||!func) return alert("Selecione!");
+        const key = `ponto_${emp.toLowerCase()}_${func.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`;
         const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
             const ins = tr.querySelectorAll("input");
             return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value }
         });
         await db.collection("pontos").doc(key).set({dados});
-        alert("Salvo!");
+        alert("✅ Ponto salvo!");
     }
 
     async function carregar() {
         const emp = document.getElementById("empresa").value, func = document.getElementById("funcionario").value;
-        if(!emp || !func) return alert("Selecione Empresa e Colaborador!");
-        await carregarSaldoAnterior();
-        const key = `ponto_${emp}_${func}_${anoEl.value}_${mesEl.value}`;
+        if(!emp||!func) return alert("Selecione!");
+        const key = `ponto_${emp.toLowerCase()}_${func.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`;
         const doc = await db.collection("pontos").doc(key).get();
         if(doc.exists) {
             const dados = doc.data().dados;
@@ -339,47 +451,30 @@
                 if(!dados[i]) return;
                 const ins = tr.querySelectorAll("input");
                 tr.querySelector("select").value = dados[i].tipo;
-                ins[0].value = dados[i].e1; ins[1].value = dados[i].s1;
-                ins[2].value = dados[i].e2; ins[3].value = dados[i].s2;
-                ins[4].value = dados[i].obs;
+                ins[0].value=dados[i].e1; ins[1].value=dados[i].s1; ins[2].value=dados[i].e2; ins[3].value=dados[i].s2; ins[4].value=dados[i].obs;
             });
             calc();
-        } else { alert("Nenhum dado."); gerar(); }
+        } else { alert("Sem dados."); gerar(); }
     }
 
     function popularSelectEmpresasModal() {
         const fEmp = document.getElementById("fEmpresaVinculo");
-        fEmp.innerHTML = `<option value="">Escolha uma Empresa...</option>`;
-        JSON.parse(localStorage.getItem('empresas') || "[]").forEach(e => fEmp.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
+        if(USUARIO_LOGADO.tipo === "EMPRESA") { fEmp.innerHTML = `<option value="${USUARIO_LOGADO.nome}">${USUARIO_LOGADO.nome.toUpperCase()}</option>`; fEmp.disabled = true; }
+        else { fEmp.disabled = false; fEmp.innerHTML = ""; db.collection("empresas").get().then(s => s.forEach(d => fEmp.innerHTML += `<option value="${d.data().nome}">${d.data().nome.toUpperCase()}</option>`)); }
     }
-    function filtrarColaboradores(n) {
-        document.getElementById("empresa").value = n;
-        const sel = document.getElementById("selFunc");
-        if(!n) return sel.innerHTML = `<option>Aguardando...</option>`;
-        const fs = JSON.parse(localStorage.getItem('funcionarios') || "[]").filter(f => f.empresaVinculo === n);
-        sel.innerHTML = `<option value="">Selecione...</option>`;
-        fs.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(f => sel.innerHTML += `<option value="${f.nome}">${f.nome}</option>`);
-    }
-    function selecionarColaborador(n) { document.getElementById("funcionario").value = n; carregarSaldoAnterior(); }
-    function atualizarSelectsPrincipais() {
-        const sel = document.getElementById("selEmp");
-        sel.innerHTML = `<option value="">Selecione a Empresa...</option>`;
-        JSON.parse(localStorage.getItem('empresas') || "[]").sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(e => sel.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
-    }
-    async function buscaCNPJ(c) {
-        c = c.replace(/\D/g,''); if(c.length !== 14) return;
-        try { const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); const data = await resp.json();
-            document.getElementById('eNome').value = data.razao_social; document.getElementById('eCEP').value = data.cep;
-            document.getElementById('eEnd').value = data.logradouro; document.getElementById('eEstado').value = data.uf; document.getElementById('eNum').value = data.numero;
-        } catch(e) {}
-    }
-    async function buscaCEP(c, p) {
-        c = c.replace(/\D/g,''); if(c.length != 8) return;
-        const resp = await fetch(`https://viacep.com.br/ws/${c}/json/`); const data = await resp.json();
-        if(!data.erro) { document.getElementById(p+'End').value = data.logradouro; document.getElementById(p+'Estado').value = data.uf; }
-    }
+    
+    function selecionarColaborador(n) { document.getElementById("funcionario").value = n; }
+    function mascaraCPF(i) { let v = i.value.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); i.value = v; }
+    async function buscaCNPJ(c) { c=c.replace(/\D/g,''); if(c.length!==14) return; const r=await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); const d=await r.json(); document.getElementById('eNome').value=d.razao_social.toUpperCase(); document.getElementById('eCEP').value=d.cep; document.getElementById('eEnd').value=d.logradouro.toUpperCase(); document.getElementById('eEstado').value=d.uf; document.getElementById('eNum').value=d.numero; }
+    async function buscaCEP(c, p) { c=c.replace(/\D/g,''); if(c.length!==8) return; const r=await fetch(`https://viacep.com.br/ws/${c}/json/`); const d=await r.json(); if(!d.erro){document.getElementById(p+'End').value=d.logradouro.toUpperCase(); document.getElementById(p+'Estado').value=d.uf.toUpperCase();} }
+    function abrirModal(id) { if(id === 'mFunc') popularSelectEmpresasModal(); document.getElementById(id).style.display='flex'; }
+    function fecharModal(id) { document.getElementById(id).style.display='none'; }
 
-    window.onload = () => { atualizarSelectsPrincipais(); gerar(); };
+    const dNowUI = new Date();
+    for(let i=1; i<=12; i++) document.getElementById("mes").innerHTML += `<option value="${i}" ${i==dNowUI.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
+    for(let i=2023; i<=2030; i++) document.getElementById("ano").innerHTML += `<option value="${i}" ${i==dNowUI.getFullYear()?'selected':''}>${i}</option>`;
+
+    window.onload = carregarEmpresasNoLogin;
 </script>
 </body>
 </html>
