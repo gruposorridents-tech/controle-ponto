@@ -3,60 +3,70 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Ponto CLT - Pro v5</title>
+<title>Sistema de Ponto CLT - Pro v20</title>
+
+<!-- BIBLIOTECAS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <style>
-    :root { --primary: #2563eb; --dark: #0f172a; --bg: #f1f5f9; --danger: #ef4444; --purple: #8b5cf6; --excel: #1d6f42; }
-    body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:#334155;}
+    :root { 
+        --primary: #2563eb; --dark: #0f172a; --bg: #f1f5f9; 
+        --danger: #ef4444; --excel: #16a34a; --border: #cbd5e1; --slate: #475569;
+    }
+    body { margin:0; font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: #1e293b; }
+    .header { background: var(--dark); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 1.1rem; margin: 0; font-weight: 800; letter-spacing: 1px; }
+    .container { max-width: 1500px; margin: 0 auto; padding: 20px; }
     
-    /* LOGIN */
-    #loginScreen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--dark); z-index: 1000; display: flex; justify-content: center; align-items: center; color: white; }
-    .login-box { background: white; padding: 30px; border-radius: 12px; color: #334155; width: 300px; text-align: center; }
-    .login-box input, .login-box select { width: 100%; margin-bottom: 15px; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+    .panel { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .section-label { font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 15px; display: block; }
+    
+    .control-grid { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+    @media (max-width: 800px) { .control-grid { grid-template-columns: 1fr; } }
 
-    /* LAYOUT */
-    .header{background:var(--dark);color:white;padding:15px;text-align:center;font-weight:bold; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;}
-    .container{padding:20px;}
-    .top-controls{display:flex; gap:15px; flex-wrap:wrap; background:white; padding:20px; border-radius:10px; box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom:20px;}
+    .time-config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
     
-    .field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
-    .field-group label { font-size: 10px; font-weight: bold; color: #64748b; letter-spacing: 0.5px; }
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-group label { font-size: 10px; font-weight: 700; color: var(--slate); }
+    
+    input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%; box-sizing: border-box; }
+    
+    .btn-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
+    button { height: 40px; padding: 0 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+    
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--excel); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-dark { background: var(--dark); color: white; }
+    .btn-outline { background: white; border: 1px solid var(--border); color: var(--slate); }
+    button:hover { filter: brightness(1.1); }
 
-    .base-schedule{display:flex; gap:10px; align-items:flex-end; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; width:100%; flex-wrap: wrap;}
-    
-    input,select{padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; width: 100%; text-transform: uppercase; box-sizing: border-box;}
-    input[type="password"] { text-transform: none; }
-    input[type="time"] { min-width: 85px; }
-    input[readonly] { background-color: #f8fafc; cursor: not-allowed; border-color: #e2e8f0; color: #475569; }
-    
-    button{padding:10px 15px; border:none; border-radius:6px; cursor:pointer; font-weight:600; transition:0.2s; display:inline-flex; align-items:center; gap:5px; white-space: nowrap;}
-    .btn-primary{background:var(--primary);color:white;}
-    .btn-success{background:#16a34a;color:white;}
-    .btn-excel{background:var(--excel);color:white;}
-    .btn-dark{background:#334155;color:white;}
-    .btn-danger{background:var(--danger); color: white;}
-    .btn-import{background:var(--purple); color: white;}
-    .btn-logout{background:#64748b; color: white; padding: 5px 10px; font-size: 11px;}
-    
-    .cards{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;}
-    .card{flex:1;background:white;padding:15px;border-radius:10px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.05);min-width:110px;}
-    .card b{display:block;font-size:1.4rem;margin-top:5px;}
-    .credito{color:#16a34a;} .debito{color:#dc2626;}
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .card { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
+    .card span { font-size: 9px; color: var(--slate); font-weight: 800; text-transform: uppercase; }
+    .card b { display: block; font-size: 1.4rem; margin-top: 5px; }
+    .credito { color: #16a34a; } .debito { color: #dc2626; }
 
-    table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);}
-    th{background:#1e293b;color:white;padding:12px;font-size:12px;}
-    td{padding:8px;text-align:center;border-bottom:1px solid #f1f5f9; font-size: 13px;}
-    .hoje{background:#eff6ff !important;outline:2px solid #3b82f6;}
-    
-    .modal{display:none;position:fixed;z-index:1100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;}
-    .modal-content{background:white;padding:25px;border-radius:12px;width:90%;max-width:500px;}
-    .grid-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    .full-w{grid-column: span 2;}
+    .table-container { background: white; border-radius: 10px; border: 1px solid #e2e8f0; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1100px; }
+    th { background: #f8fafc; padding: 12px; color: var(--slate); border-bottom: 2px solid #e2e8f0; font-size: 11px; }
+    td { padding: 8px; text-align: center; border-bottom: 1px solid #f1f5f9; }
+    .hoje { background: #eff6ff !important; font-weight: bold; }
+    .fds { background: #f8fafc; color: #94a3b8; }
+
+    /* MODAL ESTILIZADO */
+    .modal { display:none; position:fixed; z-index:3000; inset:0; background:rgba(0,0,0,0.5); justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+    .modal-content { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+    .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    .full-w { grid-column: span 2; }
+
+    #loginScreen { position: fixed; inset: 0; background: var(--dark); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+    .login-box { background: white; padding: 40px; border-radius: 16px; width: 320px; text-align: center; }
     .master-only { display: none; }
 </style>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAEQ2fa6m9px15IGR6vUuPD_UnFHkw1Pc",
@@ -74,308 +84,442 @@
 
 <div id="loginScreen">
     <div class="login-box">
-        <h2 style="margin-bottom: 20px;">PONTO CLT - LOGIN</h2>
-        <select id="loginUser"><option value="ADMIN">USUÁRIO MASTER (ADMIN)</option></select>
-        <input type="password" id="loginPass" placeholder="SENHA DE ACESSO">
-        <button class="btn-primary" style="width:100%" onclick="tentarLogin()">ENTRAR</button>
+        <h2 style="margin-top:0; color: var(--dark)">LOGIN SISTEMA</h2>
+        <select id="loginUser" style="margin-bottom:12px"></select>
+        <input type="password" id="loginPass" placeholder="Senha">
+        <button class="btn-primary" style="width:100%; margin-top: 15px;" onclick="tentarLogin()">ENTRAR</button>
     </div>
 </div>
 
 <div class="header">
-    <span>CONTROLE DE PONTO</span>
-    <div id="userInfo" style="font-size: 11px; opacity: 0.8;"></div>
-    <button class="btn-logout" onclick="logout()">SAIR / LOGOUT</button>
+    <h1>PONTO<span>CLT</span></h1>
+    <div id="userInfo" style="font-size: 11px;"></div>
+    <button class="btn-danger" style="height: 28px; font-size: 10px;" onclick="location.reload()">LOGOUT</button>
 </div>
 
 <div class="container">
-    <div class="top-controls">
-        <div style="display:flex; gap:10px; width:100%; flex-wrap: wrap;">
-            <button class="btn-dark master-only" onclick="abrirModal('mEmpresa')">🏢 NOVA EMPRESA</button>
-            <button class="btn-primary master-only" onclick="abrirModalSenha()">🔑 ALTERAR SENHA</button>
-            <button class="btn-danger master-only" onclick="deletarEmpresa()">🗑️ DELETAR EMPRESA</button>
-            <button class="btn-dark" onclick="abrirModal('mFunc')">👤 NOVO COLABORADOR</button>
-            <button class="btn-danger master-only" onclick="deletarColaborador()">🗑️ DELETAR COLABORADOR</button>
-        </div>
-        
-        <div class="field-group master-only">
-            <label>SELECIONAR EMPRESA</label>
-            <select id="selEmp" onchange="filtrarColaboradores(this.value)"></select>
-        </div>
-        <div class="field-group">
-            <label>SELECIONAR COLABORADOR</label>
-            <select id="selFunc" onchange="selecionarColaborador(this.value)"></select>
-        </div>
-
-        <div class="base-schedule">
-            <div class="field-group" style="min-width: 80px; flex: 0;"><label>ENTRADA</label><input type="time" id="bE1" value="08:00" oninput="calcularCargaAutomatica()"></div>
-            <div class="field-group" style="min-width: 80px; flex: 0;"><label>ALMOÇO</label><input type="time" id="bS1" value="12:00" oninput="calcularCargaAutomatica()"></div>
-            <div class="field-group" style="min-width: 80px; flex: 0;"><label>RETORNO</label><input type="time" id="bE2" value="13:00" oninput="calcularCargaAutomatica()"></div>
-            <div class="field-group" style="min-width: 80px; flex: 0;"><label>SAÍDA</label><input type="time" id="bS2" value="17:00" oninput="calcularCargaAutomatica()"></div>
-            <div class="field-group" style="min-width: 80px; flex: 0;">
-                <label>HORAS/DIA</label>
-                <input id="carga" type="text" value="8.00" readonly style="text-align: center; font-weight: bold; color: var(--primary);">
-            </div>
-        </div>
-
-        <hr style="width:100%;border:0;border-top:1px solid #e2e8f0; margin: 5px 0;">
-
-        <!-- LINHA DE VISUALIZAÇÃO CORRIGIDA -->
-        <div style="display: flex; gap: 15px; width: 100%; flex-wrap: wrap; align-items: flex-end;">
-            <div class="field-group" style="flex: 2;"><label>EMPRESA ATIVA</label><input id="empresa" readonly></div>
-            <div class="field-group" style="flex: 2;"><label>NOME COLABORADOR</label><input id="funcionario" readonly></div>
-            <div class="field-group" style="flex: 0; min-width: 100px;"><label>MÊS</label><select id="mes" onchange="gerar()"></select></div>
-            <div class="field-group" style="flex: 0; min-width: 100px;"><label>ANO</label><select id="ano" onchange="gerar()"></select></div>
-        </div>
-        
-        <div style="display:flex; align-items:flex-end; gap:8px; margin-left: auto; width: 100%; justify-content: flex-end; flex-wrap: wrap;">
-            <button class="btn-import" onclick="document.getElementById('fileInput').click()">📁 IMPORTAR CSV</button>
-            <button class="btn-excel" onclick="exportarExcel()">📊 EXCEL</button>
-            <button class="btn-primary" onclick="carregar()">🔄 CARREGAR PONTO</button>
-            <button class="btn-success" onclick="salvarPonto()">💾 SALVAR PONTO</button>
-            <input type="file" id="fileInput" style="display:none" accept=".csv, .txt" onchange="importarArquivo(event)">
+    
+    <!-- PAINEL ADMINISTRATIVO NO TOPO -->
+    <div class="panel master-only">
+        <span class="section-label">Gestão Administrativa</span>
+        <div class="btn-group">
+            <button class="btn-dark" onclick="abrirModal('mEmpresa')">🏢 CADASTRO EMPRESA</button>
+            <button class="btn-dark" onclick="abrirModal('mFunc')">👤 CADASTRO COLABORADOR</button>
+            <button class="btn-outline" onclick="abrirModalSenha()">🔑 ALTERAR SENHA</button>
+            <button class="btn-danger" onclick="deletarEmpresa()">🗑️ EXCLUIR EMPRESA</button>
         </div>
     </div>
 
-    <!-- CARDS -->
+    <div class="panel">
+        <span class="section-label">Filtros e Período</span>
+        <div class="control-grid">
+            <div class="field-group"><label>EMPRESA ATIVA</label><select id="selEmp" onchange="filtrarColaboradores(this.value)"></select></div>
+            <div class="field-group"><label>COLABORADOR</label><select id="selFunc" onchange="selecionarColaborador(this.value)"></select></div>
+            <div class="field-group"><label>MÊS</label><select id="mes" onchange="gerar()"></select></div>
+            <div class="field-group"><label>ANO</label><select id="ano" onchange="gerar()"></select></div>
+        </div>
+
+        <span class="section-label">Jornada de Trabalho</span>
+        <div class="time-config-grid">
+            <div class="field-group"><label>ENTRADA</label><input type="time" id="bE1" value="09:00"></div>
+            <div class="field-group"><label>S. ALMOÇO</label><input type="time" id="bS1" value="12:00"></div>
+            <div class="field-group"><label>RETORNO</label><input type="time" id="bE2" value="13:00"></div>
+            <div class="field-group"><label>SAÍDA (PADRÃO)</label><input type="time" id="bS2" value="19:00"></div>
+            <div class="field-group"><label>SEXTA DIFER.?</label><select id="useSexta" onchange="calc()"><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select></div>
+            <div class="field-group"><label>SAÍDA SEXTA</label><input type="time" id="bS2F" value="18:00"></div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-dark" onclick="salvarPonto()">💾 SALVAR</button>
+            <button class="btn-danger" onclick="limparMesLocal()">🧹 LIMPAR</button>
+            <button class="btn-outline" onclick="document.getElementById('fileExcel').click()">📥 IMPORTAR ARQUIVO</button>
+            <button class="btn-success" onclick="exportarExcel()">📤 EXPORTAR EXCEL</button>
+            <input type="file" id="fileExcel" style="display:none" accept=".xlsx, .xls, .csv, .txt, .ods" onchange="importarArquivoUniversal(event)">
+        </div>
+    </div>
+
     <div class="cards">
-        <div class="card">TRABALHADO<br><b id="h">00:00</b></div>
-        <div class="card">CRÉDITO<br><b id="c" class="credito">00:00</b></div>
-        <div class="card">DÉBITO<br><b id="d" class="debito">00:00</b></div>
-        <div class="card">DSR PERDIDO<br><b id="dsr" style="color:#f59e0b">00:00</b></div>
-        <div class="card">SALDO ANTERIOR<br><b id="sa">00:00</b></div>
-        <div class="card">SALDO MÊS<br><b id="sm">00:00</b></div>
-        <div class="card" style="background:#e2e8f0">SALDO ACUMULADO<br><b id="ac">00:00</b></div>
+        <div class="card"><span>TRABALHADO</span><b id="h">00:00</b></div>
+        <div class="card"><span>CRÉDITO</span><b id="c" class="credito">00:00</b></div>
+        <div class="card"><span>DÉBITO</span><b id="d" class="debito">00:00</b></div>
+        <div class="card"><span>DSR PERDIDO</span><b id="dsr" style="color:orange">00:00</b></div>
+        <div class="card"><span>SALDO ANTERIOR</span><b id="sa">00:00</b></div>
+        <div class="card" style="background: var(--dark); border: none;"><span style="color:#94a3b8">SALDO ACUMULADO</span><b id="ac" style="color:white">00:00</b></div>
     </div>
 
-    <table id="tabelaPonto">
-        <thead>
-            <tr>
-                <th>DIA</th><th>SEM</th><th>TIPO JORNADA</th><th>ENTRADA</th><th>ALMOÇO</th><th>RETORNO</th><th>SAÍDA</th><th>TOTAL</th><th>SALDO</th><th>OBS</th>
-            </tr>
-        </thead>
-        <tbody id="tb"></tbody>
-    </table>
+    <div class="table-container">
+        <table id="tabelaPonto">
+            <thead>
+                <tr>
+                    <th width="40">DIA</th><th width="60">SEM</th><th width="160">JORNADA</th>
+                    <th>ENTRADA</th><th>ALMOÇO</th><th>RETORNO</th><th>SAÍDA</th>
+                    <th>TOTAL</th><th>SALDO</th><th>OBSERVAÇÕES (FERIADOS)</th>
+                </tr>
+            </thead>
+            <tbody id="tb"></tbody>
+        </table>
+    </div>
 </div>
 
-<!-- MODAIS -->
+<!-- MODAL EMPRESA -->
 <div id="mEmpresa" class="modal"><div class="modal-content">
-    <h3>🏢 CADASTRAR NOVA EMPRESA</h3>
+    <h3 style="margin-top:0">🏢 Cadastrar Nova Empresa</h3>
     <div class="grid-form">
-        <input id="eCNPJ" class="full-w" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
-        <input id="eNome" class="full-w" placeholder="RAZÃO SOCIAL">
+        <input id="eCNPJ" class="full-w" placeholder="CNPJ (Somente números)" onblur="buscaCNPJ(this.value)">
+        <input id="eNome" class="full-w" placeholder="Razão Social">
         <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
-        <input id="eEstado" placeholder="UF"><input id="eEnd" class="full-w" placeholder="LOGRADOURO">
-        <input id="eNum" placeholder="NÚMERO"><input id="eTel" placeholder="TELEFONE">
-        <input id="eSenha" class="full-w" type="password" placeholder="DEFINIR SENHA DE ACESSO">
+        <input id="eEstado" placeholder="UF">
+        <input id="eEnd" class="full-w" placeholder="Logradouro / Rua">
+        <input id="eNum" placeholder="Número">
+        <input id="eTel" placeholder="Telefone">
+        <input id="eSenha" class="full-w" type="password" placeholder="Definir Senha de Acesso">
     </div><br>
-    <button class="btn-success" onclick="salvarCadastro('empresas', 'e')">SALVAR</button>
-    <button onclick="fecharModal('mEmpresa')">CANCELAR</button>
+    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('empresas', 'e')">SALVAR EMPRESA</button>
+    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mEmpresa')">CANCELAR</button>
 </div></div>
 
-<div id="mSenha" class="modal"><div class="modal-content">
-    <h3>🔑 ALTERAR SENHA DA EMPRESA</h3>
-    <p id="labelEmpresaSenha" style="font-weight: bold; color: var(--primary);"></p>
-    <div class="grid-form">
-        <input id="novaSenhaInput" class="full-w" type="password" placeholder="DIGITE A NOVA SENHA">
-    </div><br>
-    <button class="btn-success" onclick="confirmarAlterarSenha()">ATUALIZAR SENHA</button>
-    <button onclick="fecharModal('mSenha')">CANCELAR</button>
-</div></div>
-
+<!-- MODAL COLABORADOR -->
 <div id="mFunc" class="modal"><div class="modal-content">
-    <h3>👤 CADASTRAR COLABORADOR</h3>
+    <h3 style="margin-top:0">👤 Cadastrar Colaborador</h3>
     <div class="grid-form">
-        <div class="full-w"><label style="font-size: 10px;">VINCULAR EMPRESA:</label><br><select id="fEmpresaVinculo"></select></div>
-        <input id="fNome" class="full-w" placeholder="NOME COMPLETO">
-        <input id="fCPF" placeholder="CPF" oninput="mascaraCPF(this)" maxlength="14">
+        <div class="full-w"><label style="font-size:10px">VINCULAR À EMPRESA:</label><select id="fEmpresaVinculo"></select></div>
+        <input id="fNome" class="full-w" placeholder="Nome Completo">
+        <input id="fCPF" placeholder="CPF">
         <input id="fCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'f')">
-        <input id="fEstado" placeholder="UF"><input id="fEnd" class="full-w" placeholder="ENDEREÇO">
-        <input id="fNum" placeholder="NÚMERO"><input id="fTel" placeholder="TELEFONE">
+        <input id="fEstado" placeholder="UF">
+        <input id="fEnd" class="full-w" placeholder="Endereço Completo">
     </div><br>
-    <button class="btn-success" onclick="salvarCadastro('funcionarios', 'f')">SALVAR</button>
-    <button onclick="fecharModal('mFunc')">CANCELAR</button>
+    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('funcionarios', 'f')">SALVAR COLABORADOR</button>
+    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mFunc')">CANCELAR</button>
 </div></div>
+
+<!-- MODAL SENHA -->
+<div id="mSenha" class="modal"><div class="modal-content">
+    <h3>🔑 Alterar Senha</h3>
+    <p id="labelEmpresaSenha" style="font-weight: bold; color: var(--primary);"></p>
+    <input id="novaSenhaInput" type="password" placeholder="Nova Senha">
+    <button class="btn-primary" style="width:100%; margin-top:15px" onclick="confirmarAlterarSenha()">ATUALIZAR SENHA</button>
+    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mSenha')">CANCELAR</button>
+</div></div>
+
+<input type="hidden" id="empresa"><input type="hidden" id="funcionario">
 
 <script>
-    const MASTER_PASS = "admin123";
     let USUARIO_LOGADO = null;
+    let SALDO_ANTERIOR_MIN = 0;
+    const MASTER_PASS = "admin123";
+    const FERIADOS_LISTA = ["Confraternização Universal", "Carnaval", "Quarta-feira de Cinzas", "Sexta-feira Santa", "Páscoa", "Tiradentes", "Dia do Trabalho", "Corpus Christi", "Revolução Constitucionalista (SP)", "Independência do Brasil", "Nsa Sra Aparecida", "Finados", "Proclamação da República", "Consciência Negra", "Natal", "Feriado Municipal"];
 
-    // --- LOGIN ---
+    // AUTO TAB
+    document.addEventListener('input', e => {
+        if (e.target.type === 'time' && e.target.value.length === 5) {
+            const ins = Array.from(e.target.closest('tr').querySelectorAll('input[type="time"]'));
+            const idx = ins.indexOf(e.target);
+            if (idx < ins.length - 1) ins[idx + 1].focus();
+        }
+    });
+
     async function tentarLogin() {
-        const user = document.getElementById("loginUser").value;
-        const pass = document.getElementById("loginPass").value;
-        if(user === "ADMIN") {
-            if(pass === MASTER_PASS) configurarAcesso("MASTER", "ADMIN");
+        const u = document.getElementById("loginUser").value, p = document.getElementById("loginPass").value;
+        if(u === "ADMIN") {
+            if(p === MASTER_PASS) configurarAcesso("MASTER", "ADMIN");
             else alert("Senha Incorreta!");
         } else {
-            const doc = await db.collection("empresas").doc(user).get();
-            if(doc.exists && doc.data().senha === pass) configurarAcesso("EMPRESA", user);
-            else alert("Senha da Empresa Incorreta!");
+            const doc = await db.collection("empresas").doc(u).get();
+            if(doc.exists && doc.data().senha === p) configurarAcesso("EMPRESA", u);
+            else alert("Senha Incorreta!");
         }
     }
 
     function configurarAcesso(tipo, nome) {
         USUARIO_LOGADO = { tipo, nome };
         document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("userInfo").innerText = `SESSÃO ATIVA: ${nome.toUpperCase()}`;
-        
-        // LIMPEZA OBRIGATÓRIA AO LOGAR
-        document.getElementById("funcionario").value = "";
-        document.getElementById("selFunc").innerHTML = '<option value="">SELECIONE...</option>';
-        document.getElementById("empresa").value = (tipo === "EMPRESA") ? nome.toUpperCase() : "";
-
-        if(tipo === "MASTER") document.querySelectorAll(".master-only").forEach(el => el.style.display = "inline-flex");
-        else document.querySelectorAll(".master-only").forEach(el => el.style.display = "none");
-        
+        document.getElementById("userInfo").innerText = `SESSÃO: ${nome.toUpperCase()}`;
+        if(tipo === "MASTER") document.querySelectorAll(".master-only").forEach(el => el.style.display = "block");
         atualizarSelectsPrincipais();
         gerar();
-        calcularCargaAutomatica();
     }
 
-    function logout() { location.reload(); }
-
-    // --- FILTRAGEM ---
-    async function filtrarColaboradores(n) {
-        document.getElementById("empresa").value = n.toUpperCase();
-        // LIMPAR CAMPO COLABORADOR AO TROCAR EMPRESA
-        document.getElementById("funcionario").value = "";
-        
-        const sel = document.getElementById("selFunc");
-        sel.innerHTML = `<option value="">CARREGANDO...</option>`;
-        
-        const snap = await db.collection("funcionarios").where("empresaVinculo", "==", n).get();
-        sel.innerHTML = `<option value="">SELECIONE O COLABORADOR...</option>`;
-        snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome.toUpperCase()}</option>`; });
-    }
-
-    function selecionarColaborador(n) { 
-        document.getElementById("funcionario").value = n.toUpperCase(); 
-    }
-
-    // --- CARGA HORÁRIA ---
-    function calcularCargaAutomatica() {
-        const e1 = timeToMin(document.getElementById("bE1").value);
-        const s1 = timeToMin(document.getElementById("bS1").value);
-        const e2 = timeToMin(document.getElementById("bE2").value);
-        const s2 = timeToMin(document.getElementById("bS2").value);
-        let totalMin = 0;
-        if (e1 && s1) totalMin += (s1 - e1);
-        if (e2 && s2) totalMin += (s2 - e2);
-        document.getElementById("carga").value = (totalMin / 60).toFixed(2);
-        calc();
-    }
-
-    // --- CÁLCULOS E TABELA ---
+    // --- CÁLCULOS E LÓGICA ---
     function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
     function format(min) { const s = min<0?"-":""; const a = Math.abs(Math.round(min)); return s+String(Math.floor(a/60)).padStart(2,'0')+":"+String(a%60).padStart(2,'0'); }
 
     function calc() {
-        let totalH=0, cred=0, deb=0; const carga = parseFloat(document.getElementById("carga").value||8)*60; const faltas = new Set();
-        document.querySelectorAll("#tb tr").forEach(tr => {
-            const ins = tr.querySelectorAll("input"), tipo = tr.querySelector("select").value;
-            let w = 0; const m1=timeToMin(ins[0].value), m4=timeToMin(ins[3].value);
-            if(m1&&m4) w = (timeToMin(ins[1].value)&&timeToMin(ins[2].value)) ? (timeToMin(ins[1].value)-m1)+(m4-timeToMin(ins[2].value)) : (m4-m1);
-            let s=0, te=w;
-            if(tipo==="ATESTADO") {te=carga; s=0;}
-            else if(tipo==="ATESTADO HORAS") { const ab = parseFloat(ins[4].value||0)*60; te=w+ab; s=te-carga; }
-            else if(tipo==="FALTA") {te=0; s=-carga; faltas.add(tr.getAttribute('data-week'));}
-            else if(["FOLGA/FDS","FERIADO"].includes(tipo)) s=w;
-            else if(w>0) s=w-carga;
-            totalH += (tipo==="NORMAL"?w:0); s>0?cred+=s:deb+=Math.abs(s);
-            tr.querySelector(".t").innerText=format(te); tr.querySelector(".s").innerText=format(s);
-            tr.querySelector(".s").style.color = s>0?"green":(s<0?"red":"black");
+        let totalH=0, cred=0, deb=0, dsrPerdido=0;
+        const e1B = document.getElementById("bE1").value, s1B = document.getElementById("bS1").value;
+        const e2B = document.getElementById("bE2").value, s2B = document.getElementById("bS2").value, s2FB = document.getElementById("bS2F").value;
+        const useSex = document.getElementById("useSexta").value === "SIM";
+        const now = new Date(); now.setHours(0,0,0,0);
+        const selMes = parseInt(document.getElementById("mes").value), selAno = parseInt(document.getElementById("ano").value);
+
+        document.querySelectorAll("#tb tr").forEach((tr, index) => {
+            const diaNum = index + 1;
+            const sem = tr.getAttribute('data-day'), tipo = tr.querySelector("select").value, ins = tr.querySelectorAll("input");
+            let carga = 0;
+            if(sem >= 1 && sem <= 4) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+            else if(sem == 5) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(useSex ? s2FB : s2B)-timeToMin(e2B));
+            else if(sem == 6 && tipo === "NORMAL") carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+
+            let worked = 0; const m1=timeToMin(ins[0].value), m4=timeToMin(ins[3].value);
+            if(m1 && m4) worked = (timeToMin(ins[1].value) && timeToMin(ins[2].value)) ? (timeToMin(ins[1].value)-m1)+(m4-timeToMin(ins[2].value)) : (m4-m1);
+
+            let saldo = 0, displayT = worked;
+            const isNoPassadoOuHoje = new Date(selAno, selMes - 1, diaNum) <= now;
+
+            if(tipo === "NORMAL") {
+                if (worked > 0) { saldo = worked - carga; totalH += worked; }
+                else if (isNoPassadoOuHoje) { saldo = -carga; }
+                else { saldo = 0; }
+            } else if(tipo === "FALTA") {
+                saldo = -carga; if (isNoPassadoOuHoje) dsrPerdido += carga; displayT = 0;
+            } else if(["FOLGA/FDS","FERIADO"].includes(tipo)) saldo = worked;
+            else if(tipo === "ATESTADO" || tipo === "ATESTADO HORAS") { displayT = (tipo === "ATESTADO") ? 0 : worked; saldo = 0; }
+
+            tr.querySelector(".t").innerText = format(displayT);
+            tr.querySelector(".s").innerText = format(saldo);
+            tr.querySelector(".s").className = saldo > 0 ? "s credito" : (saldo < 0 ? "s debito" : "s");
+            saldo > 0 ? cred += saldo : deb += Math.abs(saldo);
         });
-        const dsr = faltas.size * carga; const sm = cred-deb-dsr;
-        document.getElementById("h").innerText=format(totalH); document.getElementById("c").innerText=format(cred); document.getElementById("d").innerText=format(deb);
-        document.getElementById("dsr").innerText=format(dsr); document.getElementById("sm").innerText=format(sm);
-        document.getElementById("ac").innerText=format(sm);
+
+        document.getElementById("h").innerText = format(totalH);
+        document.getElementById("c").innerText = format(cred);
+        document.getElementById("d").innerText = format(deb);
+        document.getElementById("dsr").innerText = format(dsrPerdido);
+        document.getElementById("sa").innerText = format(SALDO_ANTERIOR_MIN);
+        document.getElementById("ac").innerText = format(cred - deb - dsrPerdido + SALDO_ANTERIOR_MIN);
     }
 
-    function gerar() {
+    async function gerar() {
         const mes = +document.getElementById("mes").value, ano = +document.getElementById("ano").value;
         const dias = new Date(ano, mes, 0).getDate();
         const tb = document.getElementById("tb"); tb.innerHTML = "";
         for(let i=1; i<=dias; i++) {
-            const d = new Date(ano, mes-1, i);
+            const d = new Date(ano, mes-1, i), sem = d.getDay();
             const tr = document.createElement("tr");
-            tr.setAttribute('data-week', Math.ceil(i/7));
+            tr.setAttribute('data-day', sem);
+            if(sem === 0 || sem === 6) tr.classList.add("fds");
             if(d.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
-            tr.innerHTML = `<td>${String(i).padStart(2,'0')}</td><td>${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"][d.getDay()]}</td>
-                <td><select onchange="autoPreencher(this)"><option>NORMAL</option><option ${d.getDay()==0||d.getDay()==6?'selected':''}>FOLGA/FDS</option><option>FERIADO</option><option>ATESTADO</option><option>ATESTADO HORAS</option><option>FALTA</option></select></td>
-                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
-                <td class="t">00:00</td><td class="s">00:00</td><td><input style="text-transform:none" type="text" oninput="calc()"></td>`;
+            tr.innerHTML = `<td>${String(i).padStart(2,'0')}</td><td>${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"][sem]}</td>
+                <td><select onchange="autoPreencher(this)">
+                    <option ${sem>0 && sem<6 ? 'selected' : ''}>NORMAL</option>
+                    <option ${sem==0 || sem==6 ? 'selected' : ''}>FOLGA/FDS</option>
+                    <option>FERIADO</option><option>ATESTADO</option><option>ATESTADO HORAS</option><option>FALTA</option>
+                </select></td>
+                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
+                <td><input type="time" oninput="calc()"></td><td><input type="time" oninput="calc()"></td>
+                <td class="t">00:00</td><td class="s">00:00</td><td class="obs-cell"><input type="text"></td>`;
             tb.appendChild(tr);
+        }
+        await buscarSaldoAnterior(); carregar(); 
+    }
+
+    // --- API BUSCAS ---
+    async function buscaCNPJ(c) {
+        c = c.replace(/\D/g,''); if(c.length !== 14) return;
+        const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`);
+        const d = await r.json();
+        if(d.razao_social) {
+            document.getElementById('eNome').value = d.razao_social.toUpperCase();
+            document.getElementById('eCEP').value = d.cep;
+            document.getElementById('eEnd').value = d.logradouro.toUpperCase();
+            document.getElementById('eEstado').value = d.uf;
+            document.getElementById('eNum').value = d.numero;
+        }
+    }
+    async function buscaCEP(c, p) {
+        c = c.replace(/\D/g,''); if(c.length !== 8) return;
+        const r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
+        const d = await r.json();
+        if(!d.erro){
+            document.getElementById(p+'End').value = d.logradouro.toUpperCase();
+            document.getElementById(p+'Estado').value = d.uf.toUpperCase();
+        }
+    }
+
+    // --- FIREBASE OPERAÇÕES ---
+    async function carregar() {
+        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
+        if(!e || !f) return;
+        const key = `ponto_${e}_${f}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`.toLowerCase();
+        const doc = await db.collection("pontos").doc(key).get();
+        if(doc.exists) {
+            const d = doc.data();
+            if(d.jornadaConfig) {
+                document.getElementById("bE1").value = d.jornadaConfig.bE1 || "09:00";
+                document.getElementById("bS1").value = d.jornadaConfig.bS1 || "12:00";
+                document.getElementById("bE2").value = d.jornadaConfig.bE2 || "13:00";
+                document.getElementById("bS2").value = d.jornadaConfig.bS2 || "19:00";
+                document.getElementById("useSexta").value = d.jornadaConfig.useSexta || "SIM";
+                document.getElementById("bS2F").value = d.jornadaConfig.bS2F || "18:00";
+            }
+            if(d.dados) {
+                document.querySelectorAll("#tb tr").forEach((tr, i) => {
+                    if(!d.dados[i]) return;
+                    const ins = tr.querySelectorAll("input"); tr.querySelector("select").value = d.dados[i].tipo;
+                    ins[0].value=d.dados[i].e1; ins[1].value=d.dados[i].s1; ins[2].value=d.dados[i].e2; ins[3].value=d.dados[i].s2;
+                    const obsCell = tr.querySelector(".obs-cell");
+                    if (d.dados[i].tipo === "FERIADO") {
+                        let h = `<select><option value="">Feriado...</option>`; 
+                        FERIADOS_LISTA.forEach(f => h += `<option value="${f}" ${f === d.dados[i].obs ? 'selected' : ''}>${f}</option>`); h += `</select>`;
+                        obsCell.innerHTML = h;
+                    } else obsCell.innerHTML = `<input type="text" value="${d.dados[i].obs || ''}">`;
+                });
+            }
         }
         calc();
     }
 
-    // --- OUTRAS FUNÇÕES (MANTIDAS) ---
-    function autoPreencher(s) {
-        const tr = s.closest('tr'); const ins = tr.querySelectorAll('input[type="time"]');
-        if(["FOLGA/FDS","FERIADO","ATESTADO"].includes(s.value)) {
-            ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
-            ins[2].value = document.getElementById("bE2").value; ins[3].value = document.getElementById("bS2").value;
-        } else if (s.value === "NORMAL" || s.value === "FALTA") ins.forEach(i => i.value = "");
+    async function salvarPonto() {
+        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
+        if(!e || !f) return alert("Selecione Colaborador!");
+        const key = `ponto_${e}_${f}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`.toLowerCase();
+        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
+            const ins = tr.querySelectorAll("input"), obsIn = tr.querySelector(".obs-cell input, .obs-cell select");
+            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: obsIn ? obsIn.value : "" }
+        });
+        const jornadaConfig = { bE1: document.getElementById("bE1").value, bS1: document.getElementById("bS1").value, bE2: document.getElementById("bE2").value, bS2: document.getElementById("bS2").value, useSexta: document.getElementById("useSexta").value, bS2F: document.getElementById("bS2F").value };
+        const sMes = timeToMin(document.getElementById("c").innerText) - timeToMin(document.getElementById("d").innerText) - timeToMin(document.getElementById("dsr").innerText);
+        const sa = sMes + SALDO_ANTERIOR_MIN;
+        await db.collection("pontos").doc(key).set({ dados, jornadaConfig, saldoFinalAcumulado: sa });
+        alert("Salvo com sucesso!");
+    }
+
+    // --- OUTRAS FUNÇÕES ---
+    async function buscarSaldoAnterior() {
+        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
+        if(!e || !f) return;
+        let m = parseInt(document.getElementById("mes").value) - 1, a = parseInt(document.getElementById("ano").value);
+        if (m === 0) { m = 12; a--; }
+        const key = `ponto_${e}_${f}_${a}_${m}`.toLowerCase();
+        const doc = await db.collection("pontos").doc(key).get();
+        SALDO_ANTERIOR_MIN = (doc.exists && doc.data().saldoFinalAcumulado) ? doc.data().saldoFinalAcumulado : 0;
         calc();
     }
 
-    async function salvarCadastro(colecao, p) {
-        const nome = document.getElementById(p+'Nome').value.trim().toUpperCase();
-        const doc = document.getElementById(p+(p=='e'?'CNPJ':'CPF')).value.trim();
-        if(!nome || !doc) return alert("Preencha Nome e Doc!");
-        const dados = { nome, doc, empresaVinculo: p == 'f' ? (USUARIO_LOGADO.tipo === "EMPRESA" ? USUARIO_LOGADO.nome : document.getElementById('fEmpresaVinculo').value) : null, cep: document.getElementById(p+'CEP').value, rua: document.getElementById(p+'End').value.toUpperCase(), num: document.getElementById(p+'Num').value, uf: document.getElementById(p+'Estado').value.toUpperCase(), tel: document.getElementById(p+'Tel').value };
-        if(p == 'e') dados.senha = document.getElementById('eSenha').value;
-        await db.collection(colecao).doc(nome).set(dados);
-        alert("✅ Salvo!");
-        document.querySelectorAll(`#m${p === 'e' ? 'Empresa' : 'Func'} input`).forEach(i => i.value = "");
-        fecharModal(p=='e'?'mEmpresa':'mFunc');
-        atualizarSelectsPrincipais();
-        carregarEmpresasNoLogin();
+    function autoPreencher(s) {
+        const tr = s.closest('tr'), sem = tr.getAttribute('data-day'), ins = tr.querySelectorAll('input[type="time"]');
+        const obsCell = tr.querySelector(".obs-cell");
+        if (s.value === "FERIADO") {
+            let h = `<select><option value="">Feriado...</option>`; FERIADOS_LISTA.forEach(f => h += `<option value="${f}">${f}</option>`); h += `</select>`;
+            obsCell.innerHTML = h;
+            ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
+            ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem == 5 && document.getElementById("useSexta").value === "SIM") ? document.getElementById("bS2F").value : document.getElementById("bS2").value;
+        } else {
+            obsCell.innerHTML = `<input type="text">`;
+            if (s.value === "NORMAL") {
+                ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
+                ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem == 5 && document.getElementById("useSexta").value === "SIM") ? document.getElementById("bS2F").value : document.getElementById("bS2").value;
+            } else ins.forEach(i => i.value = "");
+        }
+        calc();
     }
 
-    async function deletarColaborador() {
-        const colab = document.getElementById("selFunc").value;
-        if(!colab) return alert("Selecione!");
-        if(confirm(`Excluir ${colab}?`)) { await db.collection("funcionarios").doc(colab).delete(); alert("Removido!"); filtrarColaboradores(document.getElementById("selEmp").value || USUARIO_LOGADO.nome); }
+    function importarArquivoUniversal(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+            rows.forEach(row => {
+                let vD = row[0], d;
+                if (vD instanceof Date) d=vD.getDate();
+                else if (typeof vD === 'string' && vD.includes('/')) d=parseInt(vD.split('/')[0]);
+                else if (typeof vD === 'number' && vD < 32) d = vD;
+                if (d) {
+                    const tr = document.querySelector(`#tb tr:nth-child(${d})`);
+                    if (tr) {
+                        const ins = tr.querySelectorAll('input[type="time"]');
+                        if (row[2]) ins[0].value = excelToTime(row[2]);
+                        if (row[3]) ins[1].value = excelToTime(row[3]);
+                        if (row[4]) ins[2].value = excelToTime(row[4]);
+                        if (row[5]) ins[3].value = excelToTime(row[5]);
+                    }
+                }
+            });
+            calc(); alert("Arquivo Processado!");
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function excelToTime(v) {
+        if (!v || v === 0) return "";
+        if (typeof v === 'number') {
+            let s = Math.round(v * 24 * 3600);
+            return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}`;
+        }
+        return v.toString().substring(0,5);
+    }
+
+    function exportarExcel() {
+        const f = document.getElementById("funcionario").value; if(!f) return alert("Selecione!");
+        const data = [["DIA", "SEM", "JORNADA", "ENTRADA", "ALMOÇO", "RETORNO", "SAÍDA", "TOTAL", "SALDO", "OBS"]];
+        document.querySelectorAll("#tb tr").forEach(tr => {
+            const tds = tr.querySelectorAll("td"), ins = tr.querySelectorAll("input");
+            const obs = tr.querySelector(".obs-cell input, .obs-cell select").value;
+            data.push([tds[0].innerText, tds[1].innerText, tr.querySelector("select").value, ins[0].value, ins[1].value, ins[2].value, ins[3].value, tds[7].innerText, tds[8].innerText, obs]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Ponto"); XLSX.writeFile(wb, `Ponto_${f}.xlsx`);
+    }
+
+    function limparMesLocal() {
+        if(confirm("Limpar tela?")) {
+            document.querySelectorAll("#tb tr").forEach(tr => {
+                tr.querySelectorAll('input').forEach(i => i.value = "");
+                const s = tr.getAttribute('data-day');
+                tr.querySelector('select').value = (s == 0 || s == 6) ? "FOLGA/FDS" : "NORMAL";
+                tr.querySelector(".obs-cell").innerHTML = `<input type="text">`;
+            });
+            calc();
+        }
     }
 
     async function carregarEmpresasNoLogin() {
         const snap = await db.collection("empresas").get();
-        const loginSel = document.getElementById("loginUser");
-        loginSel.innerHTML = `<option value="ADMIN">USUÁRIO MASTER (ADMIN)</option>`;
-        snap.forEach(doc => { loginSel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome.toUpperCase()}</option>`; });
+        const loginSel = document.getElementById("loginUser"); loginSel.innerHTML = `<option value="ADMIN">ADMINISTRADOR MASTER</option>`;
+        const lista = []; snap.forEach(doc => lista.push(doc.data().nome));
+        lista.sort().forEach(emp => { loginSel.innerHTML += `<option value="${emp}">${emp.toUpperCase()}</option>`; });
     }
 
     async function atualizarSelectsPrincipais() {
-        const selEmp = document.getElementById("selEmp");
-        selEmp.innerHTML = `<option value="">SELECIONE...</option>`;
+        const selEmp = document.getElementById("selEmp"); selEmp.innerHTML = `<option value="">Selecione...</option>`;
         const snap = await db.collection("empresas").get();
         snap.forEach(doc => {
             const emp = doc.data().nome;
-            if(USUARIO_LOGADO.tipo === "EMPRESA") { if(emp === USUARIO_LOGADO.nome) { selEmp.innerHTML = `<option value="${emp}">${emp}</option>`; selEmp.value = emp; selEmp.disabled = true; filtrarColaboradores(emp); } }
-            else { selEmp.innerHTML += `<option value="${emp}">${emp}</option>`; selEmp.disabled = false;}
+            if(USUARIO_LOGADO.tipo === "EMPRESA") {
+                if(emp === USUARIO_LOGADO.nome) { selEmp.innerHTML = `<option value="${emp}">${emp}</option>`; selEmp.value = emp; selEmp.disabled = true; filtrarColaboradores(emp); }
+            } else selEmp.innerHTML += `<option value="${emp}">${emp}</option>`;
         });
     }
 
-    // Funções extras (CEP, CNPJ, Senha, Ponto, Excel, Import) resumidas para brevidade
-    function abrirModalSenha() { const emp = document.getElementById("selEmp").value; if(!emp) return alert("Selecione!"); document.getElementById("labelEmpresaSenha").innerText = emp.toUpperCase(); abrirModal('mSenha'); }
-    async function confirmarAlterarSenha() { const emp = document.getElementById("selEmp").value; const nova = document.getElementById("novaSenhaInput").value; if(!nova) return; await db.collection("empresas").doc(emp).update({ senha: nova }); alert("✅ Sucesso!"); fecharModal('mSenha'); }
-    async function deletarEmpresa() { const n = document.getElementById("selEmp").value; if(!n) return; if(confirm(`Deletar ${n}?`)) { await db.collection("empresas").doc(n).delete(); logout(); } }
-    async function salvarPonto() { const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value; if(!e||!f) return alert("Selecione!"); const key = `ponto_${e.toLowerCase()}_${f.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`; const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => { const ins = tr.querySelectorAll("input"); return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: ins[4].value } }); await db.collection("pontos").doc(key).set({dados}); alert("✅ Salvo!"); }
-    async function carregar() { const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value; if(!e||!f) return alert("Selecione!"); const key = `ponto_${e.toLowerCase()}_${f.toLowerCase()}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`; const doc = await db.collection("pontos").doc(key).get(); if(doc.exists) { const d = doc.data().dados; document.querySelectorAll("#tb tr").forEach((tr, i) => { if(!d[i]) return; const ins = tr.querySelectorAll("input"); tr.querySelector("select").value = d[i].tipo; ins[0].value=d[i].e1; ins[1].value=d[i].s1; ins[2].value=d[i].e2; ins[3].value=d[i].s2; ins[4].value=d[i].obs; }); calc(); } else { alert("Sem dados."); gerar(); } }
-    function exportarExcel() { const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value; if(!f) return alert("Selecione!"); let csv = `RELATORIO;${f};EMPRESA;${e}\n\nDIA;SEMANA;TIPO;ENTRADA;ALMOCO;RETORNO;SAIDA;TOTAL;SALDO;OBS\n`; document.querySelectorAll("#tb tr").forEach(tr => { const tds = tr.querySelectorAll("td"), ins = tr.querySelectorAll("input"); csv += `${tds[0].innerText};${tds[1].innerText};${tr.querySelector("select").value};${ins[0].value};${ins[1].value};${ins[2].value};${ins[3].value};${tds[7].innerText};${tds[8].innerText};${ins[4].value}\n`; }); const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `PONTO_${f}.csv`; link.click(); }
-    function importarArquivo(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { const lines = e.target.result.split('\n'); lines.forEach(line => { const parts = line.split(/[;,]/); if (parts.length >= 2) { const dia = parseInt(parts[0]); const row = document.querySelector(`#tb tr:nth-child(${dia})`); if (row) { const inputs = row.querySelectorAll('input[type="time"]'); if (parts[1]) inputs[0].value = parts[1].trim(); if (parts[2]) inputs[1].value = parts[2].trim(); if (parts[3]) inputs[2].value = parts[3].trim(); if (parts[4]) inputs[3].value = parts[4].trim(); } } }); calc(); alert("✅ Importado!"); }; reader.readAsText(file); }
-    function popularSelectEmpresasModal() { const f = document.getElementById("fEmpresaVinculo"); if(USUARIO_LOGADO.tipo === "EMPRESA") { f.innerHTML = `<option value="${USUARIO_LOGADO.nome}">${USUARIO_LOGADO.nome.toUpperCase()}</option>`; f.disabled = true; } else { f.disabled = false; f.innerHTML = ""; db.collection("empresas").get().then(s => s.forEach(d => f.innerHTML += `<option value="${d.data().nome}">${d.data().nome.toUpperCase()}</option>`)); } }
-    function mascaraCPF(i) { let v = i.value.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); i.value = v; }
-    async function buscaCNPJ(c) { c=c.replace(/\D/g,''); if(c.length!==14) return; const r=await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); const d=await r.json(); document.getElementById('eNome').value=d.razao_social.toUpperCase(); document.getElementById('eCEP').value=d.cep; document.getElementById('eEnd').value=d.logradouro.toUpperCase(); document.getElementById('eEstado').value=d.uf; document.getElementById('eNum').value=d.numero; }
-    async function buscaCEP(c, p) { c=c.replace(/\D/g,''); if(c.length!==8) return; const r=await fetch(`https://viacep.com.br/ws/${c}/json/`); const d=await r.json(); if(!d.erro){document.getElementById(p+'End').value=d.logradouro.toUpperCase(); document.getElementById(p+'Estado').value=d.uf.toUpperCase();} }
-    function abrirModal(id) { if(id === 'mFunc') popularSelectEmpresasModal(); document.getElementById(id).style.display='flex'; }
+    async function filtrarColaboradores(n) {
+        document.getElementById("empresa").value = n;
+        const sel = document.getElementById("selFunc"); sel.innerHTML = `<option value="">Carregando...</option>`;
+        const snap = await db.collection("funcionarios").where("empresaVinculo", "==", n).get();
+        sel.innerHTML = `<option value="">Selecione o Colaborador...</option>`;
+        snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; });
+    }
+
+    function selecionarColaborador(n) { document.getElementById("funcionario").value = n; carregar(); }
+    function abrirModal(id) { 
+        if(id === 'mFunc') {
+            const f = document.getElementById("fEmpresaVinculo"); f.innerHTML = "";
+            db.collection("empresas").get().then(s => s.forEach(d => f.innerHTML += `<option value="${d.data().nome}">${d.data().nome}</option>`));
+        }
+        document.getElementById(id).style.display='flex'; 
+    }
     function fecharModal(id) { document.getElementById(id).style.display='none'; }
+    async function salvarCadastro(col, p) {
+        const nome = document.getElementById(p+'Nome').value.trim();
+        if(!nome) return alert("Nome!");
+        const dados = { nome, empresaVinculo: p=='f'?(USUARIO_LOGADO.tipo==="EMPRESA"?USUARIO_LOGADO.nome:document.getElementById('fEmpresaVinculo').value):null };
+        if(p=='e') dados.senha = document.getElementById('eSenha').value;
+        await db.collection(col).doc(nome).set(dados); alert("Sucesso!"); fecharModal(p=='e'?'mEmpresa':'mFunc'); atualizarSelectsPrincipais(); carregarEmpresasNoLogin();
+    }
 
-    const dNowUI = new Date();
-    for(let i=1; i<=12; i++) document.getElementById("mes").innerHTML += `<option value="${i}" ${i==dNowUI.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
-    for(let i=2023; i<=2030; i++) document.getElementById("ano").innerHTML += `<option value="${i}" ${i==dNowUI.getFullYear()?'selected':''}>${i}</option>`;
-
+    const dN = new Date();
+    for(let i=1; i<=12; i++) document.getElementById("mes").innerHTML += `<option value="${i}" ${i==dN.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
+    for(let i=2023; i<=2030; i++) document.getElementById("ano").innerHTML += `<option value="${i}" ${i==dN.getFullYear()?'selected':''}>${i}</option>`;
     window.onload = carregarEmpresasNoLogin;
 </script>
 </body>
