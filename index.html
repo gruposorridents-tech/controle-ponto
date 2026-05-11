@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Ponto CLT - Pro v22</title>
+<title>Sistema de Ponto CLT - Pro v23</title>
 
 <!-- BIBLIOTECAS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -57,11 +57,6 @@
 
     #saveStatus { font-size: 11px; font-weight: bold; color: var(--excel); margin-left: 10px; opacity: 0; transition: 0.3s; }
 
-    .modal { display:none; position:fixed; z-index:3000; inset:0; background:rgba(0,0,0,0.5); justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-    .modal-content { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
-    .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .full-w { grid-column: span 2; }
-
     #loginScreen { position: fixed; inset: 0; background: var(--dark); z-index: 2000; display: flex; justify-content: center; align-items: center; }
     .login-box { background: white; padding: 40px; border-radius: 16px; width: 320px; text-align: center; }
     .master-only { display: none; }
@@ -101,21 +96,19 @@
 </div>
 
 <div class="container">
-    
     <div class="panel master-only">
-        <span class="section-label">Gestão Administrativa</span>
+        <span class="section-label">Ações Administrativas</span>
         <div class="btn-group">
             <button class="btn-dark" onclick="abrirModal('mEmpresa')">🏢 CADASTRO EMPRESA</button>
             <button class="btn-dark" onclick="abrirModal('mFunc')">👤 CADASTRO COLABORADOR</button>
-            <button class="btn-outline" onclick="abrirModalSenha()">🔑 ALTERAR SENHA</button>
-            <button class="btn-danger" onclick="deletarEmpresa()">🗑️ EXCLUIR EMPRESA</button>
+            <button class="btn-danger" onclick="deletarEmpresa()">🗑️ EXCLUIR</button>
         </div>
     </div>
 
     <div class="panel">
-        <span class="section-label">Filtros e Período</span>
+        <span class="section-label">Filtros</span>
         <div class="control-grid">
-            <div class="field-group"><label>EMPRESA ATIVA</label><select id="selEmp" onchange="filtrarColaboradores(this.value)"></select></div>
+            <div class="field-group"><label>EMPRESA</label><select id="selEmp" onchange="filtrarColaboradores(this.value)"></select></div>
             <div class="field-group"><label>COLABORADOR</label><select id="selFunc" onchange="selecionarColaborador(this.value)"></select></div>
             <div class="field-group"><label>MÊS</label><select id="mes" onchange="gerar()"></select></div>
             <div class="field-group"><label>ANO</label><select id="ano" onchange="gerar()"></select></div>
@@ -135,7 +128,7 @@
             <button class="btn-dark" onclick="salvarPonto(false)">💾 SALVAR</button>
             <button class="btn-danger" onclick="limparMesLocal()">🧹 LIMPAR</button>
             <button class="btn-outline" onclick="document.getElementById('fileExcel').click()">📥 IMPORTAR</button>
-            <button class="btn-success" onclick="exportarExcel()">📤 EXPORTAR</button>
+            <button class="btn-success" onclick="exportarExcel()">📤 EXCEL</button>
             <input type="file" id="fileExcel" style="display:none" accept=".xlsx, .xls, .csv, .txt, .ods" onchange="importarArquivoUniversal(event)">
         </div>
     </div>
@@ -163,37 +156,6 @@
     </div>
 </div>
 
-<!-- MODAIS -->
-<div id="mEmpresa" class="modal"><div class="modal-content">
-    <h3 style="margin-top:0">🏢 Cadastrar Empresa</h3>
-    <div class="grid-form">
-        <input id="eCNPJ" class="full-w" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
-        <input id="eNome" class="full-w" placeholder="Razão Social">
-        <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
-        <input id="eEstado" placeholder="UF">
-        <input id="eEnd" class="full-w" placeholder="Logradouro">
-        <input id="eSenha" class="full-w" type="password" placeholder="Definir Senha">
-    </div><br>
-    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('empresas', 'e')">SALVAR</button>
-    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mEmpresa')">FECHAR</button>
-</div></div>
-
-<div id="mFunc" class="modal"><div class="modal-content">
-    <h3 style="margin-top:0">👤 Cadastrar Colaborador</h3>
-    <div class="grid-form">
-        <div class="full-w"><label style="font-size:10px">VINCULAR À:</label><select id="fEmpresaVinculo"></select></div>
-        <input id="fNome" class="full-w" placeholder="Nome Completo">
-        <input id="fCPF" placeholder="CPF">
-        <input id="fCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'f')">
-        <input id="fEstado" placeholder="UF">
-        <input id="fEnd" class="full-w" placeholder="Endereço">
-    </div><br>
-    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('funcionarios', 'f')">SALVAR</button>
-    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mFunc')">FECHAR</button>
-</div></div>
-
-<input type="hidden" id="empresa"><input type="hidden" id="funcionario">
-
 <script>
     let USUARIO_LOGADO = null;
     let SALDO_ANTERIOR_MIN = 0;
@@ -201,108 +163,131 @@
     const MASTER_PASS = "admin123";
     const FERIADOS_LISTA = ["Confraternização Universal", "Carnaval", "Quarta-feira de Cinzas", "Sexta-feira Santa", "Páscoa", "Tiradentes", "Dia do Trabalho", "Corpus Christi", "Revolução Constitucionalista (SP)", "Independência do Brasil", "Nsa Sra Aparecida", "Finados", "Proclamação da República", "Consciência Negra", "Natal", "Feriado Municipal"];
 
-    // AUTO TAB
-    document.addEventListener('input', e => {
-        if (e.target.type === 'time' && e.target.value.length === 5) {
-            const ins = Array.from(e.target.closest('tr').querySelectorAll('input[type="time"]'));
-            const idx = ins.indexOf(e.target);
-            if (idx < ins.length - 1) ins[idx + 1].focus();
-        }
-        // Se a mudança for na tabela, agenda o salvamento automático
-        if (e.target.closest('#tb')) {
-            agendarSalvar();
-        }
-    });
-
-    // Função para disparar salvamento automático com delay (Debounce)
-    function agendarSalvar() {
-        const status = document.getElementById("saveStatus");
-        status.innerText = "⏳ Sincronizando...";
-        status.style.opacity = "1";
-        status.style.color = "orange";
-
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(() => {
-            salvarPonto(true); // Chamada silenciosa
-        }, 2000);
+    // Função de conversão robusta (corrige erro de sinal negativo)
+    function timeToMin(t) {
+        if(!t || t === "00:00" || t === "0") return 0;
+        const neg = t.includes("-");
+        const cleanT = t.replace("-", "");
+        const parts = cleanT.split(':');
+        const h = parseInt(parts[0]) || 0;
+        const m = parseInt(parts[1]) || 0;
+        const total = (h * 60) + m;
+        return neg ? -total : total;
     }
 
-    async function tentarLogin() {
-        const u = document.getElementById("loginUser").value, p = document.getElementById("loginPass").value;
-        if(u === "ADMIN") {
-            if(p === MASTER_PASS) configurarAcesso("MASTER", "ADMIN");
-            else alert("Senha Incorreta!");
-        } else {
-            const doc = await db.collection("empresas").doc(u).get();
-            if(doc.exists && doc.data().senha === p) configurarAcesso("EMPRESA", u);
-            else alert("Senha Incorreta!");
-        }
+    function format(min) {
+        const s = min < 0 ? "-" : "";
+        const a = Math.abs(Math.round(min));
+        return s + String(Math.floor(a/60)).padStart(2,'0') + ":" + String(a%60).padStart(2,'0');
     }
-
-    function configurarAcesso(tipo, nome) {
-        USUARIO_LOGADO = { tipo, nome };
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("userInfo").innerText = `SESSÃO: ${nome.toUpperCase()}`;
-        if(tipo === "MASTER") document.querySelectorAll(".master-only").forEach(el => el.style.display = "block");
-        atualizarSelectsPrincipais();
-        gerar();
-    }
-
-    function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
-    function format(min) { const s = min<0?"-":""; const a = Math.abs(Math.round(min)); return s+String(Math.floor(a/60)).padStart(2,'0')+":"+String(a%60).padStart(2,'0'); }
 
     function calc() {
-        let totalH=0, cred=0, deb=0, dsrPerdido=0;
+        let minTrabalhado = 0, minCredito = 0, minDebito = 0, minDsr = 0;
+        
         const e1B = document.getElementById("bE1").value, s1B = document.getElementById("bS1").value;
         const e2B = document.getElementById("bE2").value, s2B = document.getElementById("bS2").value, s2FB = document.getElementById("bS2F").value;
         const useSex = document.getElementById("useSexta").value === "SIM";
+        
         const now = new Date(); now.setHours(0,0,0,0);
         const selMes = parseInt(document.getElementById("mes").value), selAno = parseInt(document.getElementById("ano").value);
 
         document.querySelectorAll("#tb tr").forEach((tr, index) => {
             const diaNum = index + 1;
             const sem = tr.getAttribute('data-day'), tipo = tr.querySelector("select").value, ins = tr.querySelectorAll("input");
-            let carga = 0;
+            
+            let cargaDia = 0;
             if(!["FOLGA/FDS", "FERIADO"].includes(tipo)) {
-                if(sem >= 1 && sem <= 4) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
-                else if(sem == 5) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(useSex ? s2FB : s2B)-timeToMin(e2B));
-                else if(sem == 6 && tipo === "NORMAL") carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+                if(sem >= 1 && sem <= 4) cargaDia = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+                else if(sem == 5) cargaDia = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(useSex ? s2FB : s2B)-timeToMin(e2B));
+                else if(sem == 6 && tipo === "NORMAL") cargaDia = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
             }
-            let worked = 0; const m1=timeToMin(ins[0].value), m4=timeToMin(ins[3].value);
-            if(m1 && m4) worked = (timeToMin(ins[1].value) && timeToMin(ins[2].value)) ? (timeToMin(ins[1].value)-m1)+(m4-timeToMin(ins[2].value)) : (m4-m1);
-            let saldo = 0, displayT = worked;
-            const isNoPassadoOuHoje = new Date(selAno, selMes - 1, diaNum) <= now;
+
+            let worked = 0; 
+            const m1=timeToMin(ins[0].value), m2=timeToMin(ins[1].value), m3=timeToMin(ins[2].value), m4=timeToMin(ins[3].value);
+            if(m1 && m4) worked = (m2 && m3) ? (m2-m1)+(m4-m3) : (m4-m1);
+
+            let saldoDiario = 0;
+            const dataLinha = new Date(selAno, selMes - 1, diaNum);
+            const isFuturo = dataLinha > now;
+
             if(tipo === "NORMAL") {
-                if (worked > 0) { saldo = worked - carga; totalH += worked; }
-                else if (isNoPassadoOuHoje) saldo = -carga;
-                else saldo = 0;
+                if (worked > 0) {
+                    saldoDiario = worked - cargaDia;
+                    minTrabalhado += worked;
+                } else if (!isFuturo) {
+                    saldoDiario = -cargaDia;
+                }
             } else if(tipo === "FALTA") {
-                saldo = -carga; if (isNoPassadoOuHoje) dsrPerdido += carga; displayT = 0;
+                saldoDiario = -cargaDia;
+                if (!isFuturo) minDsr += cargaDia;
+                worked = 0;
             } else if(["FOLGA/FDS","FERIADO"].includes(tipo)) {
-                saldo = worked; tr.className = (tipo === "FERIADO") ? "feriado-row" : "fds";
+                saldoDiario = worked;
             } else if(tipo === "ATESTADO" || tipo === "ATESTADO HORAS") {
-                displayT = (tipo === "ATESTADO") ? 0 : worked; saldo = 0;
+                saldoDiario = 0;
+                if(tipo === "ATESTADO") worked = 0;
             }
-            tr.querySelector(".t").innerText = format(displayT);
-            tr.querySelector(".s").innerText = format(saldo);
-            tr.querySelector(".s").className = saldo > 0 ? "s credito" : (saldo < 0 ? "s debito" : "s");
-            saldo > 0 ? cred += saldo : deb += Math.abs(saldo);
+
+            tr.querySelector(".t").innerText = format(worked);
+            tr.querySelector(".s").innerText = format(saldoDiario);
+            tr.querySelector(".s").className = saldoDiario > 0 ? "s credito" : (saldoDiario < 0 ? "s debito" : "s");
+
+            if(saldoDiario > 0) minCredito += saldoDiario;
+            else minDebito += Math.abs(saldoDiario);
         });
-        document.getElementById("h").innerText = format(totalH);
-        document.getElementById("c").innerText = format(cred);
-        document.getElementById("d").innerText = format(deb);
-        document.getElementById("dsr").innerText = format(dsrPerdido);
+
+        // CÁLCULO FINAL DO ACUMULADO
+        const saldoMesAtual = minCredito - minDebito - minDsr;
+        const saldoTotalGeral = SALDO_ANTERIOR_MIN + saldoMesAtual;
+
+        document.getElementById("h").innerText = format(minTrabalhado);
+        document.getElementById("c").innerText = format(minCredito);
+        document.getElementById("d").innerText = format(minDebito);
+        document.getElementById("dsr").innerText = format(minDsr);
         document.getElementById("sa").innerText = format(SALDO_ANTERIOR_MIN);
-        document.getElementById("ac").innerText = format(cred - deb - dsrPerdido + SALDO_ANTERIOR_MIN);
+        document.getElementById("ac").innerText = format(saldoTotalGeral);
     }
 
+    async function buscarSaldoAnterior() {
+        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
+        if(!e || !f) return;
+        let m = parseInt(document.getElementById("mes").value) - 1, a = parseInt(document.getElementById("ano").value);
+        if (m === 0) { m = 12; a--; }
+        const key = `ponto_${e}_${f}_${a}_${m}`.toLowerCase();
+        const doc = await db.collection("pontos").doc(key).get();
+        // Puxa o saldo final que foi salvo no mês anterior
+        SALDO_ANTERIOR_MIN = (doc.exists && doc.data().saldoFinalAcumulado) ? doc.data().saldoFinalAcumulado : 0;
+        calc();
+    }
+
+    async function salvarPonto(silencioso = false) {
+        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
+        if(!e || !f) return;
+        const key = `ponto_${e}_${f}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`.toLowerCase();
+        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
+            const ins = tr.querySelectorAll("input"), obsIn = tr.querySelector(".obs-cell input, .obs-cell select");
+            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: obsIn ? obsIn.value : "" }
+        });
+        const jornadaConfig = { bE1: document.getElementById("bE1").value, bS1: document.getElementById("bS1").value, bE2: document.getElementById("bE2").value, bS2: document.getElementById("bS2").value, useSexta: document.getElementById("useSexta").value, bS2F: document.getElementById("bS2F").value };
+        
+        // Importante: Salvar o saldo real acumulado para o próximo mês usar
+        const sMes = timeToMin(document.getElementById("c").innerText) - timeToMin(document.getElementById("d").innerText) - timeToMin(document.getElementById("dsr").innerText);
+        const saFinal = sMes + SALDO_ANTERIOR_MIN;
+
+        await db.collection("pontos").doc(key).set({ dados, jornadaConfig, saldoFinalAcumulado: saFinal });
+        document.getElementById("saveStatus").innerText = "✅ Sincronizado";
+        document.getElementById("saveStatus").style.color = "var(--excel)";
+        if(!silencioso) alert("Salvo!");
+    }
+
+    // --- RESTANTE DO CÓDIGO (GERAR, LOGIN, AUTO-TAB, ETC) ---
     async function gerar() {
         const mes = +document.getElementById("mes").value, ano = +document.getElementById("ano").value;
         const tb = document.getElementById("tb"); tb.innerHTML = "";
-        for(let i=1; i<=new Date(ano, mes, 0).getDate(); i++) {
+        const dias = new Date(ano, mes, 0).getDate();
+        for(let i=1; i<=dias; i++) {
             const d = new Date(ano, mes-1, i), sem = d.getDay();
-            const tr = document.createElement("tr");
-            tr.setAttribute('data-day', sem);
+            const tr = document.createElement("tr"); tr.setAttribute('data-day', sem);
             if(sem === 0 || sem === 6) tr.classList.add("fds");
             if(d.toDateString() === new Date().toDateString()) tr.classList.add("hoje");
             tr.innerHTML = `<td>${String(i).padStart(2,'0')}</td><td>${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"][sem]}</td>
@@ -316,30 +301,34 @@
                 <td class="t">00:00</td><td class="s">00:00</td><td class="obs-cell"><input type="text" oninput="agendarSalvar()"></td>`;
             tb.appendChild(tr);
         }
-        await buscarSaldoAnterior(); carregar(); 
+        await buscarSaldoAnterior(); carregar();
     }
 
-    async function salvarPonto(silencioso = false) {
-        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
-        if(!e || !f) return;
-        const key = `ponto_${e}_${f}_${document.getElementById("ano").value}_${document.getElementById("mes").value}`.toLowerCase();
-        const dados = Array.from(document.querySelectorAll("#tb tr")).map(tr => {
-            const ins = tr.querySelectorAll("input"), obsIn = tr.querySelector(".obs-cell input, .obs-cell select");
-            return { tipo: tr.querySelector("select").value, e1: ins[0].value, s1: ins[1].value, e2: ins[2].value, s2: ins[3].value, obs: obsIn ? obsIn.value : "" }
-        });
-        const jornadaConfig = { bE1: document.getElementById("bE1").value, bS1: document.getElementById("bS1").value, bE2: document.getElementById("bE2").value, bS2: document.getElementById("bS2").value, useSexta: document.getElementById("useSexta").value, bS2F: document.getElementById("bS2F").value };
-        const sMes = timeToMin(document.getElementById("c").innerText) - timeToMin(document.getElementById("d").innerText) - timeToMin(document.getElementById("dsr").innerText);
-        const sa = sMes + SALDO_ANTERIOR_MIN;
+    function agendarSalvar() {
+        const s = document.getElementById("saveStatus"); s.innerText = "⏳ Sincronizando..."; s.style.opacity = "1"; s.style.color = "orange";
+        clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(() => salvarPonto(true), 2000);
+    }
 
-        try {
-            await db.collection("pontos").doc(key).set({ dados, jornadaConfig, saldoFinalAcumulado: sa });
-            const status = document.getElementById("saveStatus");
-            status.innerText = "✅ Sincronizado";
-            status.style.color = "var(--excel)";
-            if(!silencioso) alert("Salvo!");
-        } catch (err) {
-            console.error(err);
+    document.addEventListener('input', e => {
+        if (e.target.type === 'time' && e.target.value.length === 5) {
+            const ins = Array.from(e.target.closest('tr').querySelectorAll('input[type="time"]'));
+            const idx = ins.indexOf(e.target);
+            if (idx < ins.length - 1) ins[idx + 1].focus();
         }
+        if (e.target.closest('#tb')) agendarSalvar();
+    });
+
+    async function tentarLogin() {
+        const u = document.getElementById("loginUser").value, p = document.getElementById("loginPass").value;
+        if(u === "ADMIN") { if(p === MASTER_PASS) configurarAcesso("MASTER", "ADMIN"); else alert("Erro!"); }
+        else { const doc = await db.collection("empresas").doc(u).get(); if(doc.exists && doc.data().senha === p) configurarAcesso("EMPRESA", u); else alert("Erro!"); }
+    }
+
+    function configurarAcesso(tipo, nome) {
+        USUARIO_LOGADO = { tipo, nome }; document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("userInfo").innerText = `USUÁRIO: ${nome.toUpperCase()}`;
+        if(tipo === "MASTER") document.querySelectorAll(".master-only").forEach(el => el.style.display = "block");
+        atualizarSelectsPrincipais(); gerar();
     }
 
     async function carregar() {
@@ -350,156 +339,90 @@
         if(doc.exists) {
             const d = doc.data();
             if(d.jornadaConfig) { document.getElementById("bE1").value = d.jornadaConfig.bE1; document.getElementById("bS1").value = d.jornadaConfig.bS1; document.getElementById("bE2").value = d.jornadaConfig.bE2; document.getElementById("bS2").value = d.jornadaConfig.bS2; document.getElementById("useSexta").value = d.jornadaConfig.useSexta; document.getElementById("bS2F").value = d.jornadaConfig.bS2F; }
-            if(d.dados) {
-                document.querySelectorAll("#tb tr").forEach((tr, i) => {
-                    if(!d.dados[i]) return;
-                    const ins = tr.querySelectorAll("input"); tr.querySelector("select").value = d.dados[i].tipo;
-                    ins[0].value=d.dados[i].e1; ins[1].value=d.dados[i].s1; ins[2].value=d.dados[i].e2; ins[3].value=d.dados[i].s2;
-                    const obsCell = tr.querySelector(".obs-cell");
-                    if (d.dados[i].tipo === "FERIADO") {
-                        let h = `<select onchange="agendarSalvar()"><option value="">Feriado...</option>`; FERIADOS_LISTA.forEach(f => h += `<option value="${f}" ${f === d.dados[i].obs ? 'selected' : ''}>${f}</option>`); h += `</select>`;
-                        obsCell.innerHTML = h; tr.className = "feriado-row";
-                    } else obsCell.innerHTML = `<input type="text" value="${d.dados[i].obs || ''}" oninput="agendarSalvar()">`;
-                });
-            }
+            d.dados.forEach((row, i) => {
+                const tr = document.querySelector(`#tb tr:nth-child(${i+1})`); if(!tr) return;
+                const ins = tr.querySelectorAll("input"); tr.querySelector("select").value = row.tipo;
+                ins[0].value=row.e1; ins[1].value=row.s1; ins[2].value=row.e2; ins[3].value=row.s2;
+                const obsCell = tr.querySelector(".obs-cell");
+                if (row.tipo === "FERIADO") {
+                    obsCell.innerHTML = `<select onchange="agendarSalvar()"><option value="">Feriado...</option>${FERIADOS_LISTA.map(f=>`<option value="${f}" ${f===row.obs?'selected':''}>${f}</option>`).join('')}</select>`;
+                    tr.className = "feriado-row";
+                } else obsCell.innerHTML = `<input type="text" value="${row.obs||''}" oninput="agendarSalvar()">`;
+            });
         }
         calc();
     }
 
-    // --- FUNÇÕES MANTIDAS ---
     function autoPreencher(s) {
         const tr = s.closest('tr'), sem = tr.getAttribute('data-day'), ins = tr.querySelectorAll('input[type="time"]');
         const obsCell = tr.querySelector(".obs-cell");
         if (s.value === "FERIADO") {
             obsCell.innerHTML = `<select onchange="agendarSalvar()"><option value="">Feriado...</option>${FERIADOS_LISTA.map(f=>`<option value="${f}">${f}</option>`).join('')}</select>`;
             ins.forEach(i => i.value = ""); tr.className = "feriado-row";
-        } else if (s.value === "FOLGA/FDS") {
-            obsCell.innerHTML = `<input type="text" oninput="agendarSalvar()">`; ins.forEach(i => i.value = ""); tr.className = "fds";
         } else {
-            obsCell.innerHTML = `<input type="text" oninput="agendarSalvar()">`; tr.className = "";
+            obsCell.innerHTML = `<input type="text" oninput="agendarSalvar()">`; tr.className = (sem==0||sem==6)?"fds":"";
             if (s.value === "NORMAL") {
                 ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
-                ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem == 5 && document.getElementById("useSexta").value === "SIM") ? document.getElementById("bS2F").value : document.getElementById("bS2").value;
+                ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem==5 && document.getElementById("useSexta").value==="SIM")?document.getElementById("bS2F").value:document.getElementById("bS2").value;
             } else ins.forEach(i => i.value = "");
         }
         calc();
     }
-    async function buscarSaldoAnterior() {
-        const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
-        if(!e || !f) return;
-        let m = parseInt(document.getElementById("mes").value) - 1, a = parseInt(document.getElementById("ano").value);
-        if (m === 0) { m = 12; a--; }
-        const key = `ponto_${e}_${f}_${a}_${m}`.toLowerCase();
-        const doc = await db.collection("pontos").doc(key).get();
-        SALDO_ANTERIOR_MIN = (doc.exists && doc.data().saldoFinalAcumulado) ? doc.data().saldoFinalAcumulado : 0;
-        calc();
+
+    function exportarExcel() {
+        const f = document.getElementById("funcionario").value; if(!f) return;
+        const data = [["DIA", "SEM", "JORNADA", "ENTRADA", "ALMOÇO", "RETORNO", "SAÍDA", "TOTAL", "SALDO", "OBS"]];
+        document.querySelectorAll("#tb tr").forEach(tr => {
+            const tds = tr.querySelectorAll("td"), ins = tr.querySelectorAll("input"), obs = tr.querySelector(".obs-cell input, .obs-cell select").value;
+            data.push([tds[0].innerText, tds[1].innerText, tr.querySelector("select").value, ins[0].value, ins[1].value, ins[2].value, ins[3].value, tds[7].innerText, tds[8].innerText, obs]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ponto"); XLSX.writeFile(wb, `Ponto_${f}.xlsx`);
     }
+
     function importarArquivoUniversal(event) {
         const file = event.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        const reader = new FileReader(); reader.onload = (e) => {
             const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
             rows.forEach(row => {
-                let vD = row[0], d;
-                if (vD instanceof Date) d=vD.getDate();
-                else if (typeof vD === 'string' && vD.includes('/')) d=parseInt(vD.split('/')[0]);
-                else if (typeof vD === 'number' && vD < 32) d = vD;
+                let vD = row[0], d; if (vD instanceof Date) d=vD.getDate(); else if (typeof vD === 'string' && vD.includes('/')) d=parseInt(vD.split('/')[0]); else if (typeof vD === 'number' && vD < 32) d = vD;
                 if (d) {
                     const tr = document.querySelector(`#tb tr:nth-child(${d})`);
-                    if (tr) {
-                        const ins = tr.querySelectorAll('input[type="time"]');
-                        if (row[2]) ins[0].value = excelToTime(row[2]);
-                        if (row[3]) ins[1].value = excelToTime(row[3]);
-                        if (row[4]) ins[2].value = excelToTime(row[4]);
-                        if (row[5]) ins[3].value = excelToTime(row[5]);
-                    }
+                    if (tr) { const ins = tr.querySelectorAll('input[type="time"]'); if (row[2]) ins[0].value = excelToTime(row[2]); if (row[3]) ins[1].value = excelToTime(row[3]); if (row[4]) ins[2].value = excelToTime(row[4]); if (row[5]) ins[3].value = excelToTime(row[5]); }
                 }
             });
-            calc(); agendarSalvar(); alert("Importado!");
-        };
-        reader.readAsArrayBuffer(file);
-    }
-    function excelToTime(v) {
-        if (!v || v === 0) return "";
-        if (typeof v === 'number') {
-            let s = Math.round(v * 24 * 3600);
-            return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}`;
-        }
-        return v.toString().substring(0,5);
-    }
-    function exportarExcel() {
-        const f = document.getElementById("funcionario").value; if(!f) return alert("Selecione!");
-        const data = [["DIA", "SEM", "JORNADA", "ENTRADA", "ALMOÇO", "RETORNO", "SAÍDA", "TOTAL", "SALDO", "OBS"]];
-        document.querySelectorAll("#tb tr").forEach(tr => {
-            const tds = tr.querySelectorAll("td"), ins = tr.querySelectorAll("input");
-            const obs = tr.querySelector(".obs-cell input, .obs-cell select").value;
-            data.push([tds[0].innerText, tds[1].innerText, tr.querySelector("select").value, ins[0].value, ins[1].value, ins[2].value, ins[3].value, tds[7].innerText, tds[8].innerText, obs]);
-        });
-        const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Ponto"); XLSX.writeFile(wb, `Ponto_${f}.xlsx`);
-    }
-    function limparMesLocal() {
-        if(confirm("Limpar tela?")) {
-            document.querySelectorAll("#tb tr").forEach(tr => {
-                tr.querySelectorAll('input').forEach(i => i.value = "");
-                const s = tr.getAttribute('data-day');
-                tr.querySelector('select').value = (s == 0 || s == 6) ? "FOLGA/FDS" : "NORMAL";
-                tr.querySelector(".obs-cell").innerHTML = `<input type="text" oninput="agendarSalvar()">`;
-                tr.className = (s == 0 || s == 6) ? "fds" : "";
-            });
             calc(); agendarSalvar();
-        }
+        }; reader.readAsArrayBuffer(file);
     }
+
+    function excelToTime(v) { if (!v || v === 0) return ""; if (typeof v === 'number') { let s = Math.round(v * 24 * 3600); return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}`; } return v.toString().substring(0,5); }
+
+    function limparMesLocal() { if(confirm("Limpar?")) { document.querySelectorAll("#tb tr").forEach(tr => { tr.querySelectorAll('input').forEach(i => i.value = ""); const s = tr.getAttribute('data-day'); tr.querySelector('select').value = (s == 0 || s == 6) ? "FOLGA/FDS" : "NORMAL"; tr.querySelector(".obs-cell").innerHTML = `<input type="text" oninput="agendarSalvar()">`; tr.className = (s == 0 || s == 6) ? "fds" : ""; }); calc(); agendarSalvar(); } }
+
     async function carregarEmpresasNoLogin() {
-        const snap = await db.collection("empresas").get();
-        const loginSel = document.getElementById("loginUser"); loginSel.innerHTML = `<option value="ADMIN">ADMINISTRADOR MASTER</option>`;
+        const snap = await db.collection("empresas").get(); const loginSel = document.getElementById("loginUser"); loginSel.innerHTML = `<option value="ADMIN">ADMINISTRADOR MASTER</option>`;
         const lista = []; snap.forEach(doc => lista.push(doc.data().nome));
         lista.sort().forEach(emp => { loginSel.innerHTML += `<option value="${emp}">${emp.toUpperCase()}</option>`; });
     }
+
     async function atualizarSelectsPrincipais() {
         const selEmp = document.getElementById("selEmp"); selEmp.innerHTML = `<option value="">Selecione...</option>`;
         const snap = await db.collection("empresas").get();
         snap.forEach(doc => {
             const emp = doc.data().nome;
-            if(USUARIO_LOGADO.tipo === "EMPRESA") {
-                if(emp === USUARIO_LOGADO.nome) { selEmp.innerHTML = `<option value="${emp}">${emp}</option>`; selEmp.value = emp; selEmp.disabled = true; filtrarColaboradores(emp); }
-            } else selEmp.innerHTML += `<option value="${emp}">${emp}</option>`;
+            if(USUARIO_LOGADO.tipo === "EMPRESA") { if(emp === USUARIO_LOGADO.nome) { selEmp.innerHTML = `<option value="${emp}">${emp}</option>`; selEmp.value = emp; selEmp.disabled = true; filtrarColaboradores(emp); } }
+            else selEmp.innerHTML += `<option value="${emp}">${emp}</option>`;
         });
     }
+
     async function filtrarColaboradores(n) {
-        document.getElementById("empresa").value = n;
-        const sel = document.getElementById("selFunc"); sel.innerHTML = `<option value="">Carregando...</option>`;
+        document.getElementById("empresa").value = n; const sel = document.getElementById("selFunc"); sel.innerHTML = `<option value="">Carregando...</option>`;
         const snap = await db.collection("funcionarios").where("empresaVinculo", "==", n).get();
-        sel.innerHTML = `<option value="">Selecione o Colaborador...</option>`;
-        snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; });
+        sel.innerHTML = `<option value="">Selecione...</option>`; snap.forEach(doc => { sel.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`; });
     }
+
     function selecionarColaborador(n) { document.getElementById("funcionario").value = n; carregar(); }
-    function abrirModal(id) { 
-        if(id === 'mFunc') {
-            const f = document.getElementById("fEmpresaVinculo"); f.innerHTML = "";
-            db.collection("empresas").get().then(s => s.forEach(d => f.innerHTML += `<option value="${d.data().nome}">${d.data().nome}</option>`));
-        }
-        document.getElementById(id).style.display='flex'; 
-    }
-    function fecharModal(id) { document.getElementById(id).style.display='none'; }
-    async function salvarCadastro(col, p) {
-        const nome = document.getElementById(p+'Nome').value.trim();
-        if(!nome) return alert("Nome!");
-        const dados = { nome, empresaVinculo: p=='f'?(USUARIO_LOGADO.tipo==="EMPRESA"?USUARIO_LOGADO.nome:document.getElementById('fEmpresaVinculo').value):null };
-        if(p=='e') dados.senha = document.getElementById('eSenha').value;
-        await db.collection(col).doc(nome).set(dados); alert("OK!"); fecharModal(p=='e'?'mEmpresa':'mFunc'); atualizarSelectsPrincipais(); carregarEmpresasNoLogin();
-    }
-    async function buscaCNPJ(c) {
-        c = c.replace(/\D/g,''); if(c.length !== 14) return;
-        const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`); const d = await r.json();
-        if(d.razao_social) { document.getElementById('eNome').value = d.razao_social.toUpperCase(); }
-    }
-    async function buscaCEP(c, p) {
-        c = c.replace(/\D/g,''); if(c.length !== 8) return;
-        const r = await fetch(`https://viacep.com.br/ws/${c}/json/`); const d = await r.json();
-        if(!d.erro){ document.getElementById(p+'End').value = d.logradouro.toUpperCase(); document.getElementById(p+'Estado').value = d.uf.toUpperCase(); }
-    }
+
     const dN = new Date();
     for(let i=1; i<=12; i++) document.getElementById("mes").innerHTML += `<option value="${i}" ${i==dN.getMonth()+1?'selected':''}>${String(i).padStart(2,'0')}</option>`;
     for(let i=2023; i<=2030; i++) document.getElementById("ano").innerHTML += `<option value="${i}" ${i==dN.getFullYear()?'selected':''}>${i}</option>`;
