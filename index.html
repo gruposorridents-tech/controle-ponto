@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Ponto CLT - Pro v20</title>
+<title>Sistema de Ponto CLT - Pro v21</title>
 
 <!-- BIBLIOTECAS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -31,7 +31,7 @@
     .field-group { display: flex; flex-direction: column; gap: 6px; }
     .field-group label { font-size: 10px; font-weight: 700; color: var(--slate); }
     
-    input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%; box-sizing: border-box; }
+    input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box; }
     
     .btn-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
     button { height: 40px; padding: 0 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
@@ -41,7 +41,6 @@
     .btn-danger { background: var(--danger); color: white; }
     .btn-dark { background: var(--dark); color: white; }
     .btn-outline { background: white; border: 1px solid var(--border); color: var(--slate); }
-    button:hover { filter: brightness(1.1); }
 
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .card { background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
@@ -51,15 +50,14 @@
 
     .table-container { background: white; border-radius: 10px; border: 1px solid #e2e8f0; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1100px; }
-    th { background: #f8fafc; padding: 12px; color: var(--slate); border-bottom: 2px solid #e2e8f0; font-size: 11px; }
+    th { background: #f8fafc; padding: 12px; color: var(--slate); border-bottom: 2px solid #e2e8f0; }
     td { padding: 8px; text-align: center; border-bottom: 1px solid #f1f5f9; }
     .hoje { background: #eff6ff !important; font-weight: bold; }
-    .fds { background: #f8fafc; color: #94a3b8; }
+    .fds, .feriado-row { background: #f8fafc; color: #94a3b8; }
 
-    /* MODAL ESTILIZADO */
     .modal { display:none; position:fixed; z-index:3000; inset:0; background:rgba(0,0,0,0.5); justify-content: center; align-items: center; backdrop-filter: blur(2px); }
     .modal-content { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
-    .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .full-w { grid-column: span 2; }
 
     #loginScreen { position: fixed; inset: 0; background: var(--dark); z-index: 2000; display: flex; justify-content: center; align-items: center; }
@@ -84,7 +82,7 @@
 
 <div id="loginScreen">
     <div class="login-box">
-        <h2 style="margin-top:0; color: var(--dark)">LOGIN SISTEMA</h2>
+        <h2 style="margin-top:0; color: var(--dark)">LOGIN PONTO</h2>
         <select id="loginUser" style="margin-bottom:12px"></select>
         <input type="password" id="loginPass" placeholder="Senha">
         <button class="btn-primary" style="width:100%; margin-top: 15px;" onclick="tentarLogin()">ENTRAR</button>
@@ -99,7 +97,6 @@
 
 <div class="container">
     
-    <!-- PAINEL ADMINISTRATIVO NO TOPO -->
     <div class="panel master-only">
         <span class="section-label">Gestão Administrativa</span>
         <div class="btn-group">
@@ -119,7 +116,7 @@
             <div class="field-group"><label>ANO</label><select id="ano" onchange="gerar()"></select></div>
         </div>
 
-        <span class="section-label">Jornada de Trabalho</span>
+        <span class="section-label">Jornada Base</span>
         <div class="time-config-grid">
             <div class="field-group"><label>ENTRADA</label><input type="time" id="bE1" value="09:00"></div>
             <div class="field-group"><label>S. ALMOÇO</label><input type="time" id="bS1" value="12:00"></div>
@@ -132,8 +129,8 @@
         <div class="btn-group">
             <button class="btn-dark" onclick="salvarPonto()">💾 SALVAR</button>
             <button class="btn-danger" onclick="limparMesLocal()">🧹 LIMPAR</button>
-            <button class="btn-outline" onclick="document.getElementById('fileExcel').click()">📥 IMPORTAR ARQUIVO</button>
-            <button class="btn-success" onclick="exportarExcel()">📤 EXPORTAR EXCEL</button>
+            <button class="btn-outline" onclick="document.getElementById('fileExcel').click()">📥 IMPORTAR</button>
+            <button class="btn-success" onclick="exportarExcel()">📤 EXPORTAR</button>
             <input type="file" id="fileExcel" style="display:none" accept=".xlsx, .xls, .csv, .txt, .ods" onchange="importarArquivoUniversal(event)">
         </div>
     </div>
@@ -161,44 +158,42 @@
     </div>
 </div>
 
-<!-- MODAL EMPRESA -->
+<!-- MODAIS -->
 <div id="mEmpresa" class="modal"><div class="modal-content">
-    <h3 style="margin-top:0">🏢 Cadastrar Nova Empresa</h3>
+    <h3 style="margin-top:0">🏢 Cadastrar Empresa</h3>
     <div class="grid-form">
-        <input id="eCNPJ" class="full-w" placeholder="CNPJ (Somente números)" onblur="buscaCNPJ(this.value)">
+        <input id="eCNPJ" class="full-w" placeholder="CNPJ" onblur="buscaCNPJ(this.value)">
         <input id="eNome" class="full-w" placeholder="Razão Social">
         <input id="eCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'e')">
         <input id="eEstado" placeholder="UF">
-        <input id="eEnd" class="full-w" placeholder="Logradouro / Rua">
+        <input id="eEnd" class="full-w" placeholder="Logradouro">
         <input id="eNum" placeholder="Número">
         <input id="eTel" placeholder="Telefone">
-        <input id="eSenha" class="full-w" type="password" placeholder="Definir Senha de Acesso">
+        <input id="eSenha" class="full-w" type="password" placeholder="Definir Senha">
     </div><br>
-    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('empresas', 'e')">SALVAR EMPRESA</button>
-    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mEmpresa')">CANCELAR</button>
+    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('empresas', 'e')">SALVAR</button>
+    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mEmpresa')">FECHAR</button>
 </div></div>
 
-<!-- MODAL COLABORADOR -->
 <div id="mFunc" class="modal"><div class="modal-content">
     <h3 style="margin-top:0">👤 Cadastrar Colaborador</h3>
     <div class="grid-form">
-        <div class="full-w"><label style="font-size:10px">VINCULAR À EMPRESA:</label><select id="fEmpresaVinculo"></select></div>
+        <div class="full-w"><label style="font-size:10px">VINCULAR À:</label><select id="fEmpresaVinculo"></select></div>
         <input id="fNome" class="full-w" placeholder="Nome Completo">
         <input id="fCPF" placeholder="CPF">
         <input id="fCEP" placeholder="CEP" onblur="buscaCEP(this.value, 'f')">
         <input id="fEstado" placeholder="UF">
-        <input id="fEnd" class="full-w" placeholder="Endereço Completo">
+        <input id="fEnd" class="full-w" placeholder="Endereço">
     </div><br>
-    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('funcionarios', 'f')">SALVAR COLABORADOR</button>
-    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mFunc')">CANCELAR</button>
+    <button class="btn-primary" style="width:100%" onclick="salvarCadastro('funcionarios', 'f')">SALVAR</button>
+    <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mFunc')">FECHAR</button>
 </div></div>
 
-<!-- MODAL SENHA -->
 <div id="mSenha" class="modal"><div class="modal-content">
     <h3>🔑 Alterar Senha</h3>
     <p id="labelEmpresaSenha" style="font-weight: bold; color: var(--primary);"></p>
     <input id="novaSenhaInput" type="password" placeholder="Nova Senha">
-    <button class="btn-primary" style="width:100%; margin-top:15px" onclick="confirmarAlterarSenha()">ATUALIZAR SENHA</button>
+    <button class="btn-primary" style="width:100%; margin-top:15px" onclick="confirmarAlterarSenha()">ATUALIZAR</button>
     <button class="btn-outline" style="width:100%; margin-top:10px" onclick="fecharModal('mSenha')">CANCELAR</button>
 </div></div>
 
@@ -240,7 +235,6 @@
         gerar();
     }
 
-    // --- CÁLCULOS E LÓGICA ---
     function timeToMin(t) { if(!t) return 0; const [h,m] = t.split(':'); return h*60 + m*1; }
     function format(min) { const s = min<0?"-":""; const a = Math.abs(Math.round(min)); return s+String(Math.floor(a/60)).padStart(2,'0')+":"+String(a%60).padStart(2,'0'); }
 
@@ -255,10 +249,15 @@
         document.querySelectorAll("#tb tr").forEach((tr, index) => {
             const diaNum = index + 1;
             const sem = tr.getAttribute('data-day'), tipo = tr.querySelector("select").value, ins = tr.querySelectorAll("input");
+            
+            // CARGA HORÁRIA DO DIA
             let carga = 0;
-            if(sem >= 1 && sem <= 4) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
-            else if(sem == 5) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(useSex ? s2FB : s2B)-timeToMin(e2B));
-            else if(sem == 6 && tipo === "NORMAL") carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+            // Feriado e Fim de Semana não têm carga horária (neutros)
+            if(!["FOLGA/FDS", "FERIADO"].includes(tipo)) {
+                if(sem >= 1 && sem <= 4) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+                else if(sem == 5) carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(useSex ? s2FB : s2B)-timeToMin(e2B));
+                else if(sem == 6 && tipo === "NORMAL") carga = (timeToMin(s1B)-timeToMin(e1B)) + (timeToMin(s2B)-timeToMin(e2B));
+            }
 
             let worked = 0; const m1=timeToMin(ins[0].value), m4=timeToMin(ins[3].value);
             if(m1 && m4) worked = (timeToMin(ins[1].value) && timeToMin(ins[2].value)) ? (timeToMin(ins[1].value)-m1)+(m4-timeToMin(ins[2].value)) : (m4-m1);
@@ -272,8 +271,12 @@
                 else { saldo = 0; }
             } else if(tipo === "FALTA") {
                 saldo = -carga; if (isNoPassadoOuHoje) dsrPerdido += carga; displayT = 0;
-            } else if(["FOLGA/FDS","FERIADO"].includes(tipo)) saldo = worked;
-            else if(tipo === "ATESTADO" || tipo === "ATESTADO HORAS") { displayT = (tipo === "ATESTADO") ? 0 : worked; saldo = 0; }
+            } else if(["FOLGA/FDS","FERIADO"].includes(tipo)) {
+                saldo = worked; // Feriado e Folga: tudo o que trabalhar é crédito
+                tr.className = (tipo === "FERIADO") ? "feriado-row" : "fds";
+            } else if(tipo === "ATESTADO" || tipo === "ATESTADO HORAS") {
+                displayT = (tipo === "ATESTADO") ? 0 : worked; saldo = 0;
+            }
 
             tr.querySelector(".t").innerText = format(displayT);
             tr.querySelector(".s").innerText = format(saldo);
@@ -313,27 +316,42 @@
         await buscarSaldoAnterior(); carregar(); 
     }
 
+    function autoPreencher(s) {
+        const tr = s.closest('tr'), sem = tr.getAttribute('data-day'), ins = tr.querySelectorAll('input[type="time"]');
+        const obsCell = tr.querySelector(".obs-cell");
+        
+        if (s.value === "FERIADO") {
+            let h = `<select><option value="">Feriado...</option>`; FERIADOS_LISTA.forEach(f => h += `<option value="${f}">${f}</option>`); h += `</select>`;
+            obsCell.innerHTML = h;
+            ins.forEach(i => i.value = ""); // Feriado carrega vazio (neutro)
+            tr.className = "feriado-row";
+        } else if (s.value === "FOLGA/FDS") {
+            obsCell.innerHTML = `<input type="text">`;
+            ins.forEach(i => i.value = "");
+            tr.className = "fds";
+        } else {
+            obsCell.innerHTML = `<input type="text">`;
+            tr.className = "";
+            if (s.value === "NORMAL") {
+                ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
+                ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem == 5 && document.getElementById("useSexta").value === "SIM") ? document.getElementById("bS2F").value : document.getElementById("bS2").value;
+            } else ins.forEach(i => i.value = "");
+        }
+        calc();
+    }
+
     // --- API BUSCAS ---
     async function buscaCNPJ(c) {
         c = c.replace(/\D/g,''); if(c.length !== 14) return;
         const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${c}`);
         const d = await r.json();
-        if(d.razao_social) {
-            document.getElementById('eNome').value = d.razao_social.toUpperCase();
-            document.getElementById('eCEP').value = d.cep;
-            document.getElementById('eEnd').value = d.logradouro.toUpperCase();
-            document.getElementById('eEstado').value = d.uf;
-            document.getElementById('eNum').value = d.numero;
-        }
+        if(d.razao_social) { document.getElementById('eNome').value = d.razao_social.toUpperCase(); document.getElementById('eCEP').value = d.cep; document.getElementById('eEnd').value = d.logradouro.toUpperCase(); document.getElementById('eEstado').value = d.uf; document.getElementById('eNum').value = d.numero; }
     }
     async function buscaCEP(c, p) {
         c = c.replace(/\D/g,''); if(c.length !== 8) return;
         const r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
         const d = await r.json();
-        if(!d.erro){
-            document.getElementById(p+'End').value = d.logradouro.toUpperCase();
-            document.getElementById(p+'Estado').value = d.uf.toUpperCase();
-        }
+        if(!d.erro){ document.getElementById(p+'End').value = d.logradouro.toUpperCase(); document.getElementById(p+'Estado').value = d.uf.toUpperCase(); }
     }
 
     // --- FIREBASE OPERAÇÕES ---
@@ -344,14 +362,7 @@
         const doc = await db.collection("pontos").doc(key).get();
         if(doc.exists) {
             const d = doc.data();
-            if(d.jornadaConfig) {
-                document.getElementById("bE1").value = d.jornadaConfig.bE1 || "09:00";
-                document.getElementById("bS1").value = d.jornadaConfig.bS1 || "12:00";
-                document.getElementById("bE2").value = d.jornadaConfig.bE2 || "13:00";
-                document.getElementById("bS2").value = d.jornadaConfig.bS2 || "19:00";
-                document.getElementById("useSexta").value = d.jornadaConfig.useSexta || "SIM";
-                document.getElementById("bS2F").value = d.jornadaConfig.bS2F || "18:00";
-            }
+            if(d.jornadaConfig) { document.getElementById("bE1").value = d.jornadaConfig.bE1; document.getElementById("bS1").value = d.jornadaConfig.bS1; document.getElementById("bE2").value = d.jornadaConfig.bE2; document.getElementById("bS2").value = d.jornadaConfig.bS2; document.getElementById("useSexta").value = d.jornadaConfig.useSexta; document.getElementById("bS2F").value = d.jornadaConfig.bS2F; }
             if(d.dados) {
                 document.querySelectorAll("#tb tr").forEach((tr, i) => {
                     if(!d.dados[i]) return;
@@ -359,10 +370,9 @@
                     ins[0].value=d.dados[i].e1; ins[1].value=d.dados[i].s1; ins[2].value=d.dados[i].e2; ins[3].value=d.dados[i].s2;
                     const obsCell = tr.querySelector(".obs-cell");
                     if (d.dados[i].tipo === "FERIADO") {
-                        let h = `<select><option value="">Feriado...</option>`; 
-                        FERIADOS_LISTA.forEach(f => h += `<option value="${f}" ${f === d.dados[i].obs ? 'selected' : ''}>${f}</option>`); h += `</select>`;
-                        obsCell.innerHTML = h;
-                    } else obsCell.innerHTML = `<input type="text" value="${d.dados[i].obs || ''}">`;
+                        let h = `<select><option value="">Feriado...</option>`; FERIADOS_LISTA.forEach(f => h += `<option value="${f}" ${f === d.dados[i].obs ? 'selected' : ''}>${f}</option>`); h += `</select>`;
+                        obsCell.innerHTML = h; tr.className = "feriado-row";
+                    } else { obsCell.innerHTML = `<input type="text" value="${d.dados[i].obs || ''}">`; }
                 });
             }
         }
@@ -381,10 +391,9 @@
         const sMes = timeToMin(document.getElementById("c").innerText) - timeToMin(document.getElementById("d").innerText) - timeToMin(document.getElementById("dsr").innerText);
         const sa = sMes + SALDO_ANTERIOR_MIN;
         await db.collection("pontos").doc(key).set({ dados, jornadaConfig, saldoFinalAcumulado: sa });
-        alert("Salvo com sucesso!");
+        alert("Salvo!");
     }
 
-    // --- OUTRAS FUNÇÕES ---
     async function buscarSaldoAnterior() {
         const e = document.getElementById("empresa").value, f = document.getElementById("funcionario").value;
         if(!e || !f) return;
@@ -393,24 +402,6 @@
         const key = `ponto_${e}_${f}_${a}_${m}`.toLowerCase();
         const doc = await db.collection("pontos").doc(key).get();
         SALDO_ANTERIOR_MIN = (doc.exists && doc.data().saldoFinalAcumulado) ? doc.data().saldoFinalAcumulado : 0;
-        calc();
-    }
-
-    function autoPreencher(s) {
-        const tr = s.closest('tr'), sem = tr.getAttribute('data-day'), ins = tr.querySelectorAll('input[type="time"]');
-        const obsCell = tr.querySelector(".obs-cell");
-        if (s.value === "FERIADO") {
-            let h = `<select><option value="">Feriado...</option>`; FERIADOS_LISTA.forEach(f => h += `<option value="${f}">${f}</option>`); h += `</select>`;
-            obsCell.innerHTML = h;
-            ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
-            ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem == 5 && document.getElementById("useSexta").value === "SIM") ? document.getElementById("bS2F").value : document.getElementById("bS2").value;
-        } else {
-            obsCell.innerHTML = `<input type="text">`;
-            if (s.value === "NORMAL") {
-                ins[0].value = document.getElementById("bE1").value; ins[1].value = document.getElementById("bS1").value;
-                ins[2].value = document.getElementById("bE2").value; ins[3].value = (sem == 5 && document.getElementById("useSexta").value === "SIM") ? document.getElementById("bS2F").value : document.getElementById("bS2").value;
-            } else ins.forEach(i => i.value = "");
-        }
         calc();
     }
 
@@ -436,7 +427,7 @@
                     }
                 }
             });
-            calc(); alert("Arquivo Processado!");
+            calc(); alert("Importado!");
         };
         reader.readAsArrayBuffer(file);
     }
@@ -469,6 +460,7 @@
                 const s = tr.getAttribute('data-day');
                 tr.querySelector('select').value = (s == 0 || s == 6) ? "FOLGA/FDS" : "NORMAL";
                 tr.querySelector(".obs-cell").innerHTML = `<input type="text">`;
+                tr.className = (s == 0 || s == 6) ? "fds" : "";
             });
             calc();
         }
@@ -514,7 +506,7 @@
         if(!nome) return alert("Nome!");
         const dados = { nome, empresaVinculo: p=='f'?(USUARIO_LOGADO.tipo==="EMPRESA"?USUARIO_LOGADO.nome:document.getElementById('fEmpresaVinculo').value):null };
         if(p=='e') dados.senha = document.getElementById('eSenha').value;
-        await db.collection(col).doc(nome).set(dados); alert("Sucesso!"); fecharModal(p=='e'?'mEmpresa':'mFunc'); atualizarSelectsPrincipais(); carregarEmpresasNoLogin();
+        await db.collection(col).doc(nome).set(dados); alert("OK!"); fecharModal(p=='e'?'mEmpresa':'mFunc'); atualizarSelectsPrincipais(); carregarEmpresasNoLogin();
     }
 
     const dN = new Date();
